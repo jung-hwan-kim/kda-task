@@ -55,7 +55,8 @@
             "remove" (.remove stage id)
             "update" (let [updated (json/encode-smile (update-actor actor event))]
                        ;(log/info event "->" (json/decode-smile updated true))
-                       (.put stage id updated))))
+                       (.put stage id updated))
+            (log/error "Invalid EVENT TYPE:" event)))
         (.put stage id (json/encode-smile (create-actor event))))
       (log/warn "!!! Stranger !!!"))
     (let [stage-info (describe-stage stage)]
