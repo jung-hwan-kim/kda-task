@@ -8,7 +8,7 @@
 (defn -getKey[this smile-data]
   (let [event (json/decode-smile smile-data true)
         pkey (:id event)]
-    (log/info "map->" event)
+   ; (log/info "map->" event)
     (if (nil? pkey)
       (do
         (log/error "key was null for : " event)
