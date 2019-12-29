@@ -27,6 +27,13 @@
       (assoc :created (:created event))
       (assoc :history [event])))
 
+(defn update-counter [stage]
+  (let [aggr-byte (.get stage "AGGR")]
+    (if (nil? aggr-byte)
+      (.put stage "AGGR" (json/encode-smile {:count 1}))
+      (let [aggr (json/decode-smile aggr-byte true)]
+        (.put stage "AGGR" (json/encode-smile (update aggr :count inc)))))))
+
 (defn update-actor[actor event]
   ;(log/warn "update actor:" actor)
   ;(log/warn "update event" event)
@@ -40,6 +47,7 @@
   (let [event (json/decode-smile smile-data true)
         stage (.getStaged this)]
     (log/info event)
+    (update-counter stage)
     (if-let [id (:id event)]
       (if-let [actor (get-actor stage id)]
         (let [eventType (:eventType event)]
