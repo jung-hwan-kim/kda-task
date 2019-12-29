@@ -2,6 +2,7 @@ package jungfly.kda.task;
 
 import com.amazonaws.services.kinesisanalytics.runtime.KinesisAnalyticsRuntime;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.kinesis.FlinkKinesisConsumer;
 import org.apache.flink.streaming.connectors.kinesis.FlinkKinesisProducer;
 import org.apache.flink.streaming.connectors.kinesis.config.ConsumerConfigConstants;
@@ -64,7 +65,8 @@ public class Configurator {
     }
 
     public static void run() throws Exception {
-//        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+       final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+       env.getStateBackend();
 //        DataStreamSource<String> in = env.addSource(createSource());
 //        in.name("rrr");
 ////        SingleOutputStreamOperator<String> stream = in.flatMap(new ));
