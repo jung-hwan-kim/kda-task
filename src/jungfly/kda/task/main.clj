@@ -22,10 +22,11 @@
   (let [env (StreamExecutionEnvironment/getExecutionEnvironment)
         input (.addSource env (Configurator/createSource))
         parsed (.map input (new Parser))
-        keyed (.keyBy parsed (new Selector))
-        enriched (.flatMap keyed (new OpEnricher))
+       ; keyed (.keyBy parsed (new Selector))
+        enriched (.flatMap parsed (new OpEnricher))
         output (.addSink enriched (Configurator/createSink))]
     (log/info (.getStateBackend env))
+    (.enableCheckpointing env 1000)
     (.name input "in")
     (.name parsed "parser")
     (.name enriched "openricher")
