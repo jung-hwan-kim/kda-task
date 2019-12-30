@@ -4,8 +4,6 @@
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [log4j/log4j "1.2.17"]
                  [cheshire/cheshire "5.9.0"]
-                 [org.apache.logging.log4j/log4j-core "2.12.1"]
-                 [org.apache.logging.log4j/log4j-slf4j-impl "2.12.1"]
                  [org.clojure/tools.logging "0.5.0"]
                  [com.amazonaws/aws-kinesisanalytics-runtime "1.1.0"]
                  [com.amazonaws/aws-kinesisanalytics-flink "1.1.0"]

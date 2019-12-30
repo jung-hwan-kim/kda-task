@@ -3,8 +3,8 @@
   (:gen-class
     :main true)
   (:import (org.apache.flink.streaming.api.environment StreamExecutionEnvironment)
-           (jungfly.kda.task Configurator Parser Selector KeyedEnricher OpEnricher)))
-(defn execute-1[]
+           (jungfly.kda.task Configurator Parser Selector KeyedEnricher OpEnricher RawParser LogMapFunction)))
+(defn prototype-01[]
   (let [env (StreamExecutionEnvironment/getExecutionEnvironment)
         input (.addSource env (Configurator/createSource))
         parsed (.map input (new Parser))
@@ -16,9 +16,9 @@
     (.name parsed "parser")
     (.name enriched "enricher")
     (.name output "out")
-    (.execute env "KDA Prototype")))
+    (.execute env "Prototype-1")))
 
-(defn execute-2[]
+(defn prototype-02[]
   (let [env (StreamExecutionEnvironment/getExecutionEnvironment)
         input (.addSource env (Configurator/createSource))
         parsed (.map input (new Parser))
@@ -31,11 +31,23 @@
     (.name parsed "parser")
     (.name enriched "openricher")
     (.name output "out")
-    (.execute env "KDA Prototype")))
+    (.execute env "Prototype-02")))
 
+(defn prototype-03[]
+  (let [env (Configurator/configurePrototype03 (new Parser) (new OpEnricher))]
+    (.execute env "Prototype-03")))
 
+;(defn prototype-04[]
+;  (let [env (Configurator/configurePrototype04 (new RawParser) (new LogMapFunction))]
+;    (.execute env "Prototype-04")))
+
+(defn prototype-05[]
+  (let [env (Configurator/configurePrototype05 (new RawParser)
+                                               (new LogMapFunction)
+                                               (new LogMapFunction))]
+    (.execute env "Prototype-05")))
 
 (defn -main [& args]
   (log/info "Starting")
-  (execute-2))
+  (prototype-05))
 

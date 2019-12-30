@@ -3,9 +3,9 @@
             [cheshire.core :as json])
   (:gen-class
     :implements [jungfly.kda.task.AbstractParser]
-    :main false
-    ))
+    :main false))
+
 (defn -map[this value]
   (let [event (json/parse-string value true)]
-    (log/info "map->" event)
+    (log/info "parser->" event)
     (json/encode-smile event)))

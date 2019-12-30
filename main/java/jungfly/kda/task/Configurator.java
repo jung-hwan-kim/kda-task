@@ -2,14 +2,24 @@ package jungfly.kda.task;
 
 import com.amazonaws.services.kinesisanalytics.runtime.KinesisAnalyticsRuntime;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.streaming.api.collector.selector.OutputSelector;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
+import org.apache.flink.streaming.api.datastream.SplitStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.sink.SinkFunction;
+import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import org.apache.flink.streaming.connectors.kinesis.FlinkKinesisConsumer;
 import org.apache.flink.streaming.connectors.kinesis.FlinkKinesisProducer;
 import org.apache.flink.streaming.connectors.kinesis.config.ConsumerConfigConstants;
+import org.apache.flink.util.OutputTag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -63,22 +73,45 @@ public class Configurator {
         }
         return producerConfig;
     }
+    public static void configure(StreamExecutionEnvironment env) throws Exception {
+        DataStreamSource<String> src = env.addSource(createSource());
 
-    public static void run() throws Exception {
-       final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-       env.getStateBackend();
-//        DataStreamSource<String> in = env.addSource(createSource());
-//        in.name("rrr");
-////        SingleOutputStreamOperator<String> stream = in.flatMap(new ));
-//        stream.name("stream");
-//        DataStreamSink<String> out = stream.addSink(createSink());
-//        out.name("out");
-
-//        DataStream<String> input = env.addSource(createSource()).name("raw");
-//        input.map(new LogProcess()).name("log")
-//                .addSink(createSink()).name("out");
-//        env.execute("KDA Prototype");
     }
 
+    public static StreamExecutionEnvironment configurePrototype03(AbstractParser parser, AbstractOpEnricher enricher) throws Exception {
+       final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+       DataStreamSource<String> in = env.addSource(createSource());
+             in.map(parser).name("parser")
+               .flatMap(enricher).name("op-enricher").setMaxParallelism(1).setParallelism(1)
+               .addSink(createSink());
+       env.enableCheckpointing(5000);
+       return env;
+    }
 
+//    public static StreamExecutionEnvironment configurePrototype04(AbstractRawParser parser, AbstractLogMapFunction logFunction) throws Exception {
+//        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+//        DataStreamSource<String> in = env.addSource(createSource());
+//        in.map(parser).name("rawparser")
+//                .map(logFunction.name("LOG")).name("log")
+//                .addSink(createSink());
+//        return env;
+//    }
+    public static StreamExecutionEnvironment configurePrototype05(AbstractRawParser parser,
+                                                                  AbstractLogMapFunction logFunction,
+                                                                  AbstractLogMapFunction sideLogFunction) throws Exception {
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        final OutputTag<RawEvent> outputTag = new OutputTag<RawEvent>("side-output"){};
+        SinkFunction<String> out = createSink();
+
+        DataStreamSource<String> in = env.addSource(createSource());
+        in.name("in");
+
+        SingleOutputStreamOperator<RawEvent> mainStream = in.process(parser).name("rawparser");
+        mainStream.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
+
+        DataStream<RawEvent> sideStream = mainStream.getSideOutput(outputTag);
+        sideStream.map(sideLogFunction.name("SIDE")).name("side").addSink(out).name("out");
+
+        return env;
+    }
 }

@@ -29,7 +29,7 @@
 (defn update-counter [stage]
   (let [aggr (.get stage "AGGR")]
     (if (nil? aggr)
-      (.put stage "AGGR" {:count 1})
+      (.put stage "AGGR" {:count 1 :UUID (.toString (java.util.UUID/randomUUID))})
       (.put stage "AGGR" (update aggr :count inc)))))
 
 (defn update-actor[actor event]
