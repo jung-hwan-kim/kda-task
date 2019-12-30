@@ -1,8 +1,8 @@
-(ns jungfly.kda.task.Enricher
+(ns jungfly.kda.task.KeyedEnricher
   (:require [clojure.tools.logging :as log]
             [cheshire.core :as json])
   (:gen-class
-    :extends jungfly.kda.task.AbstractEnricher
+    :extends jungfly.kda.task.AbstractKeyedEnricher
     :exposes {staged {:get getStaged}}
     :main false
     ))

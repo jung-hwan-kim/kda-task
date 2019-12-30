@@ -7,7 +7,7 @@ import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 
-abstract public class AbstractEnricher extends RichFlatMapFunction<byte[], String> {
+abstract public class AbstractKeyedEnricher extends RichFlatMapFunction<byte[], String> {
     protected transient MapState<String, byte[]> staged;
 
     @Override
