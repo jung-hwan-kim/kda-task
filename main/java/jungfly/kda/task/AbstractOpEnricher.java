@@ -1,5 +1,6 @@
 package jungfly.kda.task;
 
+import clojure.lang.PersistentArrayMap;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
@@ -19,18 +20,21 @@ public abstract class AbstractOpEnricher implements FlatMapFunction<byte[], Stri
     private transient ListState<Tuple2<String, byte[]>> checkpointedState;
     private static final Logger log = LoggerFactory.getLogger(AbstractOpEnricher.class);
 
-    protected Map<String, byte[]> staged;
+    protected Map<String, PersistentArrayMap> staged;
     public AbstractOpEnricher() {
         staged = new HashMap<>();
     }
 
+    abstract public byte[] serialize(PersistentArrayMap m);
+
+    abstract public PersistentArrayMap deserialize(byte[] b);
 
     @Override
     public void snapshotState(FunctionSnapshotContext functionSnapshotContext) throws Exception {
         log.info("snapshot-state");
         checkpointedState.clear();
-        for (Map.Entry<String, byte[]> entry : staged.entrySet()) {
-            Tuple2<String, byte[]> a = new Tuple2<>(entry.getKey(), entry.getValue());
+        for (Map.Entry<String, PersistentArrayMap> entry : staged.entrySet()) {
+            Tuple2<String, byte[]> a = new Tuple2<>(entry.getKey(), serialize(entry.getValue()));
             checkpointedState.add(a);
         }
     }
@@ -43,7 +47,7 @@ public abstract class AbstractOpEnricher implements FlatMapFunction<byte[], Stri
         checkpointedState = functionInitializationContext.getOperatorStateStore().getListState(descriptor);
         if (functionInitializationContext.isRestored()) {
             for (Tuple2<String, byte[]> element : checkpointedState.get()) {
-                staged.put(element._1, element._2);
+                staged.put(element._1, deserialize(element._2));
             }
         }
     }

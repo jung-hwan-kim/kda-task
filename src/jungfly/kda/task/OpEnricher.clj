@@ -9,7 +9,7 @@
 
 (defn describe-node[node]
   (let [id (.getKey node)
-        actor (json/decode-smile (.getValue node) true)]
+        actor (.getValue node)]
     {:ID id :ACT actor}))
 
 (defn describe-stage[stage]
@@ -17,8 +17,7 @@
 
 (defn get-actor[stage id]
   ;(log/info "get-actor - id:" id)
-  (let [b (.get stage id)]
-    (json/decode-smile b true)))
+  (.get stage id))
 
 (defn create-actor [event]
   ;(log/info "*** new actor:" event)
@@ -28,11 +27,10 @@
       (assoc :history [event])))
 
 (defn update-counter [stage]
-  (let [aggr-byte (.get stage "AGGR")]
-    (if (nil? aggr-byte)
-      (.put stage "AGGR" (json/encode-smile {:count 1}))
-      (let [aggr (json/decode-smile aggr-byte true)]
-        (.put stage "AGGR" (json/encode-smile (update aggr :count inc)))))))
+  (let [aggr (.get stage "AGGR")]
+    (if (nil? aggr)
+      (.put stage "AGGR" {:count 1})
+      (.put stage "AGGR" (update aggr :count inc)))))
 
 (defn update-actor[actor event]
   ;(log/warn "update actor:" actor)
@@ -42,6 +40,12 @@
       (update :history conj event)))
 
 ;(defn remove-actor[stage id])
+
+(defn -serialize[this m]
+  (json/encode-smile m))
+
+(defn -deserialize[this b]
+  (json/decode-smile b true))
 
 (defn -flatMap[this smile-data collector]
   (let [event (json/decode-smile smile-data true)
@@ -53,11 +57,11 @@
         (let [eventType (:eventType event)]
           (case eventType
             "remove" (.remove stage id)
-            "update" (let [updated (json/encode-smile (update-actor actor event))]
+            "update" (let [updated (update-actor actor event)]
                        ;(log/info event "->" (json/decode-smile updated true))
                        (.put stage id updated))
             (log/error "Invalid EVENT TYPE:" event)))
-        (.put stage id (json/encode-smile (create-actor event))))
+        (.put stage id (create-actor event)))
       (log/warn "!!! Stranger !!!"))
     (let [stage-info (describe-stage stage)]
       (log/info "STAGE" stage-info)

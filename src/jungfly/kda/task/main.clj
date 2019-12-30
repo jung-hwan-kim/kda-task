@@ -3,13 +3,13 @@
   (:gen-class
     :main true)
   (:import (org.apache.flink.streaming.api.environment StreamExecutionEnvironment)
-           (jungfly.kda.task Configurator Parser Selector Enricher OpEnricher)))
+           (jungfly.kda.task Configurator Parser Selector KeyedEnricher OpEnricher)))
 (defn execute-1[]
   (let [env (StreamExecutionEnvironment/getExecutionEnvironment)
         input (.addSource env (Configurator/createSource))
         parsed (.map input (new Parser))
         keyed (.keyBy parsed (new Selector))
-        enriched (.flatMap keyed (new Enricher))
+        enriched (.flatMap keyed (new KeyedEnricher))
         output (.addSink enriched (Configurator/createSink))]
     (log/info (.getStateBackend env))
     (.name input "in")
