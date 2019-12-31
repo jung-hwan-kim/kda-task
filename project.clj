@@ -11,8 +11,6 @@
                  [org.apache.flink/flink-streaming-java_2.11 "1.8.2"]
                  ]
   :java-source-paths ["main/java"]
-
-
   :javac-options     ["-target" "1.8" "-source" "1.8"]
   :repl-options {:init-ns jungfly.kda.task.main-test}
   :aot :all)
