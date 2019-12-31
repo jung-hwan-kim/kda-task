@@ -1,7 +1,6 @@
 package jungfly.kda.task;
 
 import clojure.lang.PersistentArrayMap;
-import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -9,22 +8,21 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
+import org.apache.flink.streaming.api.functions.co.CoFlatMapFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
-public abstract class AbstractOpEnricher implements FlatMapFunction<byte[], String>, CheckpointedFunction {
+abstract public class AbstractCoEnricher implements CoFlatMapFunction<RawEvent, RawEvent, RawEvent>, CheckpointedFunction {
     private transient ListState<Tuple2<String, byte[]>> checkpointedState;
-    private static final Logger log = LoggerFactory.getLogger(AbstractOpEnricher.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractCoEnricher.class);
+    protected Map<String, PersistentArrayMap> rulebook;
 
-    protected Map<String, PersistentArrayMap> staged;
-    public AbstractOpEnricher() {
-        staged = new HashMap<>();
-
+    public AbstractCoEnricher() {
+        rulebook = new HashMap<>();
     }
 
     abstract public byte[] serialize(PersistentArrayMap m);
@@ -36,7 +34,7 @@ public abstract class AbstractOpEnricher implements FlatMapFunction<byte[], Stri
         long current = System.currentTimeMillis();
         long timestamp = functionSnapshotContext.getCheckpointTimestamp();
         checkpointedState.clear();
-        for (Map.Entry<String, PersistentArrayMap> entry : staged.entrySet()) {
+        for (Map.Entry<String, PersistentArrayMap> entry : rulebook.entrySet()) {
             Tuple2<String, byte[]> a = new Tuple2<>(entry.getKey(), serialize(entry.getValue()));
             checkpointedState.add(a);
         }
@@ -51,8 +49,9 @@ public abstract class AbstractOpEnricher implements FlatMapFunction<byte[], Stri
         checkpointedState = functionInitializationContext.getOperatorStateStore().getUnionListState(descriptor);
         if (functionInitializationContext.isRestored()) {
             for (Tuple2<String, byte[]> element : checkpointedState.get()) {
-                staged.put(element._1, deserialize(element._2));
+                rulebook.put(element._1, deserialize(element._2));
             }
         }
     }
+
 }

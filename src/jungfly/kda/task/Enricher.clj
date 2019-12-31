@@ -1,11 +1,12 @@
-(ns jungfly.kda.task.OpEnricher
+(ns jungfly.kda.task.Enricher
   (:require [clojure.tools.logging :as log]
             [cheshire.core :as json])
   (:gen-class
-    :extends jungfly.kda.task.AbstractOpEnricher
+    :extends jungfly.kda.task.AbstractEnricher
     :exposes {staged {:get getStaged}}
     :main false
-    ))
+    )
+  (:import (jungfly.kda.task RawEvent)))
 
 (defn describe-node[node]
   (let [id (.getKey node)
@@ -47,22 +48,36 @@
 (defn -deserialize[this b]
   (json/decode-smile b true))
 
-(defn -flatMap[this smile-data collector]
-  (let [event (json/decode-smile smile-data true)
+(defn operate[stage event]
+  (let [id (:id event)
+        op (:op event)]
+    (if-let [actor (get-actor stage id)]
+      (case op
+        "remove" (do
+                  (.remove stage id)
+                  (assoc event :action "removed"))
+        "update" (let [updated (update-actor actor event)]
+                   (.put stage id updated)
+                   (assoc event :action "updated"))
+        (assoc event :error (str "Invalid EVENT TYPE:" op)))
+      (do
+        (.put stage id (create-actor event))
+        (assoc event :action "added")))))
+
+
+(defn -flatMap[this rawEvent collector]
+  (let [
+        smile-data (.getSmile rawEvent)
+        event (json/decode-smile smile-data true)
         stage (.getStaged this)]
     (log/info event)
     (update-counter stage)
-    (if-let [id (:id event)]
-      (if-let [actor (get-actor stage id)]
-        (let [eventType (:eventType event)]
-          (case eventType
-            "remove" (.remove stage id)
-            "update" (let [updated (update-actor actor event)]
-                       ;(log/info event "->" (json/decode-smile updated true))
-                       (.put stage id updated))
-            (log/error "Invalid EVENT TYPE:" event)))
-        (.put stage id (create-actor event)))
-      (log/warn "!!! Stranger !!!"))
+    (let [r (assoc (operate stage event) :processed (System/currentTimeMillis))
+          newRaw (new RawEvent)]
+      (.setId newRaw (:id event))
+      (.setType newRaw (:type event))
+      (.setOp newRaw (:op event))
+      (.setSmile newRaw (json/encode-smile r))
+      (.collect collector newRaw))
     (let [stage-info (describe-stage stage)]
-      (log/info "STAGE" stage-info)
-      (.collect collector (json/generate-string stage-info)))))
+      (log/info "STAGE" stage-info))))

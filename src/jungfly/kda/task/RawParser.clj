@@ -3,7 +3,8 @@
             [cheshire.core :as json])
   (:gen-class
     :extends jungfly.kda.task.AbstractRawParser
-    :exposes {outputTag {:get getOutputTag}}
+    :exposes {ruleTag {:get getRuleTag}
+              errorTag {:get getErrorTag}}
     :main false)
   (:import (jungfly.kda.task RawEvent)))
 
@@ -20,6 +21,13 @@
     (.setOp raw (or op "nil"))
     (.setSmile raw smile)
 
-    (.collect collector raw)
-    (.output context (.getOutputTag this) raw)
-    ))
+    (case type
+      "actor" (.collect collector raw)
+      "rule" (do
+               (log/info "rule:" event)
+               (.output context (.getRuleTag this) raw)
+               )
+      (do
+        (log/info "error:" event)
+        (.output context (.getErrorTag this) raw)
+        ))))

@@ -9,10 +9,7 @@
 
 
 (defn -map[this rawEvent]
-  (let [type (.getType rawEvent)
-        id (.getId rawEvent)
-        op (.getOp rawEvent)
-        event (json/decode-smile (.getSmile rawEvent) true)
-        latency (- (System/currentTimeMillis) (or (:created event) 0))]
-    (log/info "latency:" latency)
-    (str (.getName this) ">" type "," id "," op "," latency)))
+  (let [event (json/decode-smile (.getSmile rawEvent) true)
+        name (.getName this)]
+    (log/info name event)
+    (json/generate-string (assoc event :logged (System/currentTimeMillis)))))

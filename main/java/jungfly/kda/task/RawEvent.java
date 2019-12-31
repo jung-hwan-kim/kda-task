@@ -6,6 +6,15 @@ public class RawEvent {
     private String op;
     private byte[] smile;
 
+    public RawEvent() {
+    }
+
+    public RawEvent(String type, String id, String op, byte[] smile) {
+        this.type = type;
+        this.id = id;
+        this.op =op;
+        this.smile = smile;
+    }
     public String getType() {
         return type;
     }
