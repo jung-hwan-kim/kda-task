@@ -114,8 +114,10 @@ public class Configurator {
         DataStream<RawEvent> errorStream = mainStream.getSideOutput(parser.errorTag);
         errorStream.map(errorLogFunction.name("ERR")).name("err").addSink(out).name("out");
 
-        mainStream2.connect(ruleStream).flatMap(coEnricher).name("co")
-                .map(logFunction.name("LOG")).name("log").addSink(out).name("out");
+        SingleOutputStreamOperator<RawEvent> enriched = mainStream2.connect(ruleStream).flatMap(coEnricher).name("co");
+        enriched.setParallelism(1);
+        enriched.setMaxParallelism(1);
+        enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
 //        MapStateDescriptor<String, byte[]> ruleStateDescriptor = new MapStateDescriptor<String, byte[]>(
 //                "RulesBroadcastState", BasicTypeInfo.STRING_TYPE_INFO, TypeInformation.of(new TypeHint<byte[]>() {}));
 
