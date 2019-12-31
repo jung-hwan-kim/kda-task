@@ -1,6 +1,8 @@
 (ns jungfly.kda.task.main-test
   (:require [clojure.test :refer :all]
             [jungfly.kda.task.mock.v :as v]
+            [cheshire.core :as json]
+            [clojure.tools.logging :as log]
             [jungfly.kda.task.main :refer :all])
   (:import (jungfly.kda.task RawEvent)))
 
