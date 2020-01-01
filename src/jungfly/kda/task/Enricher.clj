@@ -6,7 +6,7 @@
     :exposes {staged {:get getStaged}}
     :main false
     )
-  (:import (jungfly.kda.task RawEvent)))
+  )
 
 (defn describe-node[node]
   (let [id (.getKey node)
@@ -65,19 +65,13 @@
         (assoc event :action "added")))))
 
 
-(defn -flatMap[this rawEvent collector]
+(defn -flatMap[this smile-data collector]
   (let [
-        smile-data (.getSmile rawEvent)
         event (json/decode-smile smile-data true)
         stage (.getStaged this)]
     (log/info event)
     (update-counter stage)
-    (let [r (assoc (operate stage event) :processed (System/currentTimeMillis))
-          newRaw (new RawEvent)]
-      (.setId newRaw (:id event))
-      (.setType newRaw (:type event))
-      (.setOp newRaw (:op event))
-      (.setSmile newRaw (json/encode-smile r))
-      (.collect collector newRaw))
+    (let [r (assoc (operate stage event) :processed (System/currentTimeMillis))]
+      (.collect collector (json/encode-smile r)))
     (let [stage-info (describe-stage stage)]
       (log/info "STAGE" stage-info))))

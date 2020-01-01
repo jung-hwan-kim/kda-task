@@ -5,29 +5,19 @@
     :extends jungfly.kda.task.AbstractRawParser
     :exposes {ruleTag {:get getRuleTag}
               errorTag {:get getErrorTag}}
-    :main false)
-  (:import (jungfly.kda.task RawEvent)))
+    :main false))
 
 (defn -processElement[this value context collector]
   (let [event (json/parse-string value true)
         type (:type event)
-        id (:id event)
-        op (:op event)
-        smile (json/encode-smile event)
-        raw (new RawEvent)]
-    (log/info "raw:" type id op event)
-    (.setType raw (or type "unknown"))
-    (.setId raw (or id "nil"))
-    (.setOp raw (or op "nil"))
-    (.setSmile raw smile)
-
+        smile (json/encode-smile event)]
+    (log/info type)
     (case type
-      "actor" (.collect collector raw)
+      "actor" (.collect collector smile)
       "rule" (do
                (log/info "rule:" event)
-               (.output context (.getRuleTag this) raw)
+               (.output context (.getRuleTag this) smile)
                )
       (do
         (log/info "error:" event)
-        (.output context (.getErrorTag this) raw)
-        ))))
+        (.output context (.getErrorTag this) smile)))))

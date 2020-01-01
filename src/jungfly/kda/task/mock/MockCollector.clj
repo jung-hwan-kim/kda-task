@@ -8,8 +8,7 @@
     :main false
     :methods [[getCollectedRaw[] Object]
               [getCollected[] Object]]
-    )
-  (:import (jungfly.kda.task RawEvent)))
+    ))
 
 (defn -init[]
   [[] (atom [])])
@@ -18,7 +17,7 @@
   @(.state this))
 
 (defn -getCollected[this]
-  (map (fn[x] (json/decode-smile (.getSmile x) true)) @(.state this)))
+  (map (fn[x] (json/decode-smile x true)) @(.state this)))
 
 (defn -collect [this rawEvent]
   (swap! (.state this) conj rawEvent))

@@ -16,7 +16,7 @@ import scala.Tuple2;
 import java.util.HashMap;
 import java.util.Map;
 
-abstract public class AbstractCoEnricher implements CoFlatMapFunction<RawEvent, RawEvent, RawEvent>, CheckpointedFunction {
+abstract public class AbstractCoEnricher implements CoFlatMapFunction<byte[], byte[], byte[]>, CheckpointedFunction {
     private transient ListState<Tuple2<String, byte[]>> checkpointedState;
     private static final Logger log = LoggerFactory.getLogger(AbstractCoEnricher.class);
     protected Map<String, PersistentArrayMap> rulebook;

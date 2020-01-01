@@ -3,9 +3,8 @@
             [cheshire.core :as json])
   (:gen-class
     :extends jungfly.kda.task.AbstractBroadcaster
-    :main false
-    )
-  (:import (jungfly.kda.task RawEvent)))
+    :exposes {ruleStateDescriptor {:get getRuleStateDescriptor}}
+    :main false))
 
 (defn describe-node[node]
   (let [key (.getKey node)
@@ -13,85 +12,72 @@
     {:key key :value value}))
 
 (defn describe-rulebook[rulebook]
-  (map describe-node (iterator-seq (.iterator (.entrySet rulebook)))))
+  (map describe-node (iterator-seq (.iterator rulebook))))
 
-(defn get-rule[stage id]
-  ;(log/info "get-actor - id:" id)
-  (.get stage id))
-
-(defn create-rule [event]
+(defn new-state-value[event]
   ;(log/info "*** new actor:" event)
   (-> {:id (:id event)}
       (assoc :status "new")
-      (assoc :created (:created event))
+      (assoc :created (System/currentTimeMillis))
       (assoc :history [event])))
-(defn update-rule[actor event]
-  ;(log/warn "update actor:" actor)
-  ;(log/warn "update event" event)
-  (-> actor
+(defn updated-state-value[value event]
+  (-> value
       (assoc :status "updated")
+      (assoc :updated (System/currentTimeMillis))
       (update :history conj event)))
 
-(defn -serialize[this m]
-  (json/encode-smile m))
+(defn get-value[state id]
+  (json/decode-smile (.get state id)))
 
-(defn -deserialize[this b]
-  (json/decode-smile b true))
-
-(defn operate[rulebook event]
+(defn operate[state event]
   (let [id (:id event)
         op (:op event)]
-    (if-let [actor (get-rule rulebook id)]
+    (if-let [state-value (get-value state id)]
       (case op
         "remove" (do
-                   (.remove rulebook id)
-                   (assoc event :action "removed"))
-        "update" (let [updated (update-rule actor event)]
-                   (.put rulebook id updated)
-                   (assoc event :action "updated"))
+                   (.remove state id))
+        "update" (let [updated (updated-state-value state-value event)]
+                   (.put state id (json/encode-smile updated)))
         (assoc event :error (str "Invalid EVENT TYPE:" op)))
       (do
-        (.put rulebook id (create-rule event))
+        (.put state id (json/encode-smile (new-state-value event)))
         (assoc event :action "added")))))
 
+(defn inc-counter-smile [smile]
+  (if (nil? smile)
+    (let [aggr {:count 1 :UUID (.toString (java.util.UUID/randomUUID))}]
+      (log/info aggr)
+      (json/encode-smile aggr))
+    (let [aggr (update (json/decode-smile smile true) :count inc)]
+      (log/info aggr)
+      (json/encode-smile aggr))))
 
-(defn update-counter [rulebook]
-  (let [aggr (.get rulebook "AGGR")]
-    (if (nil? aggr)
-      (.put rulebook "AGGR" {:count 1 :UUID (.toString (java.util.UUID/randomUUID))})
-      (.put rulebook "AGGR" (update aggr :count inc)))))
+(defn update-counter [state]
+  (let [aggr (inc-counter-smile (.get state "aggr"))]
+    (.put state "aggr" aggr)))
 
-(defn to-rawevent[event]
-  (new RawEvent (:type event) (:id event) (:op event) (json/encode-smile event))
+
+(defn describe-state[state]
+  (into {} (map (fn[x] {(.getKey x) (json/decode-smile (.getValue x) true)}) (seq (.entries state)))))
+
+(defn describe-state-iterable[state-iterable]
+  (into {} (map (fn[x] {(.getKey x) (json/decode-smile (.getValue x) true)}) (seq state-iterable)))
   )
 
-(defn enrich[event rulebook]
+(defn enrich[event state-iterable]
   (-> event
-      (assoc :rulebook (describe-rulebook rulebook))
+      (assoc :rules (describe-state-iterable state-iterable))
       ))
-(defn -flatMap1[this rawEvent collector]
-  (let [smile-data (.getSmile rawEvent)
-        event (json/decode-smile smile-data true)
-        rulebook (.getRulebook this)
-        enriched-event (enrich event rulebook)]
-    (log/info "[1]" enriched-event)
-    (.collect collector (to-rawevent enriched-event))))
 
+(defn -process[this smile-data state-iterable collector]
+  (let [event (json/decode-smile smile-data true)]
+    (log/info "[1]" event)
+    (.collect collector (json/encode-smile (enrich event state-iterable)))))
 
-(defn flapMap2[this rawEvent context collector]
-  (let [smile-data (.getSmile rawEvent)
-        event (json/decode-smile smile-data true)
-        rulebook (.getRulebook this)]
-    (log/info "[2]" event)
-    (update-counter rulebook)
-    (log/info (operate rulebook event))
-    (log/info (describe-rulebook rulebook))))
-
-(defn -processBroadcastElement[this rawEvent context collector]
-  (let [smile-data (.getSmile rawEvent)
-        event (json/decode-smile smile-data true)
-        rulebook (.getRulebook this)]
-    (log/info "[2]" event)
-    (update-counter rulebook)
-    (log/info (operate rulebook event))
-    (log/info (describe-rulebook rulebook))))
+(defn -processBroadcast[this smile-data state collector]
+  (let [event (json/decode-smile smile-data true)]
+    (log/info "[broadcast]" event)
+    (update-counter state)
+    (log/info "OP "(operate state event))
+    ;(log/info "STATE " (describe-state state))
+    ))

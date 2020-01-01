@@ -3,8 +3,7 @@
             [jungfly.kda.task.mock.v :as v]
             [cheshire.core :as json]
             [clojure.tools.logging :as log]
-            [jungfly.kda.task.main :refer :all])
-  (:import (jungfly.kda.task RawEvent)))
+            [jungfly.kda.task.main :refer :all]))
 
 
 
@@ -31,13 +30,8 @@
         )))
 (defn push[flatMap e]
   (if (> (:status e) 0)
-    (let [event (transform e)
-          rawEvent (new RawEvent)]
-      (.setId rawEvent (:id event))
-      (.setType rawEvent (:type event))
-      (.setOp rawEvent (:op event))
-      (.setSmile rawEvent (json/encode-smile event))
-      (.flatMap flatMap rawEvent collector))))
+    (let [event (transform e)]
+      (.flatMap flatMap (json/encode-smile event) collector))))
 
 
 (defn change-and-push![flatMap]

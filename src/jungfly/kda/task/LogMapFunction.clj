@@ -9,7 +9,7 @@
 
 
 (defn -map[this rawEvent]
-  (let [event (json/decode-smile (.getSmile rawEvent) true)
+  (let [event (json/decode-smile rawEvent true)
         name (.getName this)]
     (log/info name event)
     (json/generate-string (assoc event :logged (System/currentTimeMillis)))))

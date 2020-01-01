@@ -6,7 +6,7 @@
     :exposes {rulebook {:get getRulebook}}
     :main false
     )
-  (:import (jungfly.kda.task RawEvent)))
+  )
 
 (defn describe-node[node]
   (let [key (.getKey node)
@@ -62,25 +62,20 @@
       (.put rulebook "AGGR" {:count 1 :UUID (.toString (java.util.UUID/randomUUID))})
       (.put rulebook "AGGR" (update aggr :count inc)))))
 
-(defn to-rawevent[event]
-  (new RawEvent (:type event) (:id event) (:op event) (json/encode-smile event))
-  )
 
 (defn enrich[event rulebook]
   (-> event
       (assoc :rulebook (describe-rulebook rulebook))
   ))
-(defn -flatMap1[this rawEvent collector]
-  (let [smile-data (.getSmile rawEvent)
-        event (json/decode-smile smile-data true)
+(defn -flatMap1[this smile-data collector]
+  (let [event (json/decode-smile smile-data true)
         rulebook (.getRulebook this)
         enriched-event (enrich event rulebook)]
     (log/info "[1]" enriched-event)
-    (.collect collector (to-rawevent enriched-event))))
+    (.collect collector (json/encode-smile enriched-event))))
 
-(defn -flatMap2[this rawEvent collector]
-  (let [smile-data (.getSmile rawEvent)
-        event (json/decode-smile smile-data true)
+(defn -flatMap2[this smile-data collector]
+  (let [event (json/decode-smile smile-data true)
         rulebook (.getRulebook this)]
     (log/info "[2]" event)
     (update-counter rulebook)

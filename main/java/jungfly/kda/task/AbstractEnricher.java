@@ -16,7 +16,7 @@ import scala.Tuple2;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class AbstractEnricher implements FlatMapFunction<RawEvent, RawEvent>, CheckpointedFunction {
+public abstract class AbstractEnricher implements FlatMapFunction<byte[], byte[]>, CheckpointedFunction {
     private transient ListState<Tuple2<String, byte[]>> checkpointedState;
     private static final Logger log = LoggerFactory.getLogger(AbstractEnricher.class);
 
