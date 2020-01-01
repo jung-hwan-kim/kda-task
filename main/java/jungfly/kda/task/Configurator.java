@@ -2,10 +2,8 @@ package jungfly.kda.task;
 
 import com.amazonaws.services.kinesisanalytics.runtime.KinesisAnalyticsRuntime;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.streaming.api.datastream.BroadcastStream;
-import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.datastream.DataStreamSource;
-import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
+import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.streaming.api.datastream.*;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.connectors.kinesis.FlinkKinesisConsumer;
@@ -110,7 +108,6 @@ public class Configurator {
 
 
         DataStream<byte[]> ruleStream = mainStream.getSideOutput(parser.ruleTag);
-//        ruleStream.map(sideLogFunction.name("RULE")).name("rule").addSink(out).name("out");
 
         DataStream<byte[]> errorStream = mainStream.getSideOutput(parser.errorTag);
         errorStream.map(errorLogFunction.name("ERR")).name("err").addSink(out).name("out");
@@ -119,12 +116,6 @@ public class Configurator {
         enriched.setParallelism(1);
         enriched.setMaxParallelism(1);
         enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
-//        MapStateDescriptor<String, byte[]> ruleStateDescriptor = new MapStateDescriptor<String, byte[]>(
-//                "RulesBroadcastState", BasicTypeInfo.STRING_TYPE_INFO, TypeInformation.of(new TypeHint<byte[]>() {}));
-
-        //ruleStream.broadcast(ruleStateDescriptor);
-
-        //mainStream.connect(mainStream).process();
         return env;
     }
 
@@ -152,6 +143,31 @@ public class Configurator {
 
         BroadcastStream<byte[]> broadcastStream = ruleStream.broadcast(broadcaster.ruleStateDescriptor);
         SingleOutputStreamOperator<byte[]> enriched = mainStream2.connect(broadcastStream).process(broadcaster);
+        enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
+        return env;
+    }
+
+    public static StreamExecutionEnvironment configurePrototype07(AbstractRawParser parser,
+                                                                  AbstractSelector selector,
+                                                                  AbstractLogMapFunction logFunction,
+                                                                  AbstractLogMapFunction errorLogFunction,
+                                                                  AbstractKeyedBroadcaster inventoryEnricher) throws Exception {
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        final OutputTag<byte[]> ruleTag = new OutputTag<byte[]>("rule-tag"){};
+        final OutputTag<byte[]> errorTag = new OutputTag<byte[]>("error-tag"){};
+        SinkFunction<String> out = createSink();
+        DataStreamSource<String> in = env.addSource(createSource());
+        in.name("in");
+
+        SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("parse");
+        DataStream<byte[]> bStream = mainStream.getSideOutput(parser.ruleTag);
+        DataStream<byte[]> errorStream = mainStream.getSideOutput(parser.errorTag);
+        errorStream.map(errorLogFunction.name("ERR")).name("err").addSink(out).name("out");
+
+        KeyedStream<byte[], String> keyedStream = mainStream.keyBy(selector);
+        BroadcastStream<byte[]> broadcastStream = bStream.broadcast(inventoryEnricher.stateDescriptor);
+
+        SingleOutputStreamOperator<byte[]> enriched = keyedStream.connect(broadcastStream).process(inventoryEnricher).name("inventory");
         enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
         return env;
     }
