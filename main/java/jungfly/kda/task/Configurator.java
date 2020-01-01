@@ -2,6 +2,7 @@ package jungfly.kda.task;
 
 import com.amazonaws.services.kinesisanalytics.runtime.KinesisAnalyticsRuntime;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.streaming.api.datastream.BroadcastStream;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -104,7 +105,7 @@ public class Configurator {
         DataStreamSource<String> in = env.addSource(createSource());
         in.name("in");
         SingleOutputStreamOperator<RawEvent> mainStream = in.process(parser).name("raw-parse");
-        SingleOutputStreamOperator<RawEvent> mainStream2 = mainStream.flatMap(opEnricher).name("enrich");
+        SingleOutputStreamOperator<RawEvent> mainStream2 = mainStream.flatMap(opEnricher).name("actor");
 
 
 
@@ -114,7 +115,7 @@ public class Configurator {
         DataStream<RawEvent> errorStream = mainStream.getSideOutput(parser.errorTag);
         errorStream.map(errorLogFunction.name("ERR")).name("err").addSink(out).name("out");
 
-        SingleOutputStreamOperator<RawEvent> enriched = mainStream2.connect(ruleStream).flatMap(coEnricher).name("co");
+        SingleOutputStreamOperator<RawEvent> enriched = mainStream2.connect(ruleStream).flatMap(coEnricher).name("rule");
         enriched.setParallelism(1);
         enriched.setMaxParallelism(1);
         enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
@@ -124,6 +125,34 @@ public class Configurator {
         //ruleStream.broadcast(ruleStateDescriptor);
 
         //mainStream.connect(mainStream).process();
+        return env;
+    }
+
+    public static StreamExecutionEnvironment configurePrototype06(AbstractRawParser parser,
+                                                                  AbstractLogMapFunction logFunction,
+                                                                  AbstractLogMapFunction errorLogFunction,
+                                                                  AbstractEnricher opEnricher,
+                                                                  AbstractBroadcaster broadcaster) throws Exception {
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        final OutputTag<RawEvent> ruleTag = new OutputTag<RawEvent>("rule-tag"){};
+        final OutputTag<RawEvent> errorTag = new OutputTag<RawEvent>("error-tag"){};
+        SinkFunction<String> out = createSink();
+        DataStreamSource<String> in = env.addSource(createSource());
+        in.name("in");
+        SingleOutputStreamOperator<RawEvent> mainStream = in.process(parser).name("raw-parse");
+        SingleOutputStreamOperator<RawEvent> mainStream2 = mainStream.flatMap(opEnricher).name("actor");
+
+
+        DataStream<RawEvent> ruleStream = mainStream.getSideOutput(parser.ruleTag);
+        DataStream<RawEvent> errorStream = mainStream.getSideOutput(parser.errorTag);
+        errorStream.map(errorLogFunction.name("ERR")).name("err").addSink(out).name("out");
+
+//        MapStateDescriptor<String, byte[]> ruleStateDescriptor = new MapStateDescriptor<String, byte[]>(
+//                "RulesBroadcastState", BasicTypeInfo.STRING_TYPE_INFO, TypeInformation.of(new TypeHint<byte[]>() {}));
+
+        BroadcastStream<RawEvent> broadcastStream = ruleStream.broadcast(broadcaster.ruleStateDescriptor);
+        SingleOutputStreamOperator<RawEvent> enriched = mainStream.connect(broadcastStream).process(broadcaster);
+        enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
         return env;
     }
 }
