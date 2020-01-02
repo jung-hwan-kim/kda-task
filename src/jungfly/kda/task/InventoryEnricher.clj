@@ -53,10 +53,7 @@
   (into {} (map (fn[x] {(.getKey x) (json/decode-smile (.getValue x) true)}) (seq bstate-iterable)))
   )
 
-(defn enrich[event bstate-iterable]
-  (-> event
-      (assoc :rules (describe-bstate-iterable bstate-iterable))
-      ))
+
 (defn parse-kstate[kstate]
   (let [v (.value kstate)]
     (if (nil? v)
@@ -87,12 +84,19 @@
       (do
         (.update kstate (json/encode-smile (new-kstate-value event)))))))
 
+
+(defn enrich[event kstate bstate-iterable]
+  (-> event
+      (assoc :bstate (describe-bstate-iterable bstate-iterable))
+      (assoc :kstate (parse-kstate kstate))
+      ))
+
 (defn -process[this smile-data kstate bstate-iterable collector]
   (let [event (json/decode-smile smile-data true)
         ks (parse-kstate kstate)]
     (log/info "process:" event)
     (operate-kstate kstate event)
-    (.collect collector (json/encode-smile (enrich event bstate-iterable)))))
+    (.collect collector (json/encode-smile (enrich event kstate bstate-iterable)))))
 
 (defn -processBroadcast[this smile-data bstate collector]
   (let [event (json/decode-smile smile-data true)]
