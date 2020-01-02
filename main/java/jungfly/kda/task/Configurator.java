@@ -165,7 +165,7 @@ public class Configurator {
         errorStream.map(errorLogFunction.name("ERR")).name("err").addSink(out).name("out");
 
         KeyedStream<byte[], String> keyedStream = mainStream.keyBy(selector);
-        BroadcastStream<byte[]> broadcastStream = bStream.broadcast(inventoryEnricher.stateDescriptor);
+        BroadcastStream<byte[]> broadcastStream = bStream.broadcast(inventoryEnricher.bstateDescriptor);
 
         SingleOutputStreamOperator<byte[]> enriched = keyedStream.connect(broadcastStream).process(inventoryEnricher).name("inventory");
         enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");

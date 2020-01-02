@@ -19,7 +19,7 @@
 (defn get-bstate-value[state id]
   (json/decode-smile (.get state id)))
 
-(defn operate[bstate event]
+(defn operate-bstate[bstate event]
   (let [id (:id event)
         op (:op event)]
     (if-let [bstate-value (get-bstate-value bstate id)]
@@ -57,15 +57,46 @@
   (-> event
       (assoc :rules (describe-bstate-iterable bstate-iterable))
       ))
+(defn parse-kstate[kstate]
+  (let [v (.value kstate)]
+    (if (nil? v)
+      nil
+      (json/decode-smile v true))))
 
-(defn -process[this smile-data bstate-iterable collector]
-  (let [event (json/decode-smile smile-data true)]
-    (log/info "[1]" event)
+(defn new-kstate-value[event]
+  (-> {:id (:id event)}
+      (assoc :status "new")
+      (assoc :created (System/currentTimeMillis))
+      (assoc :history [event])))
+
+(defn updated-kstate-value[ks event]
+  (-> ks
+      (assoc :status "updated")
+      (assoc :updated (System/currentTimeMillis))
+      (update :history conj event)))
+
+(defn operate-kstate[kstate event]
+  (let [op (:op event)]
+    (if-let [ks (parse-kstate kstate)]
+      (case op
+        "remove" (do
+                   (.clear kstate))
+        "update" (let [updated (updated-kstate-value ks event)]
+                   (.update kstate (json/encode-smile updated)))
+        (log/error "INVALID B-STATE OPERATION:" + event))
+      (do
+        (.update kstate (json/encode-smile (new-kstate-value event)))))))
+
+(defn -process[this smile-data kstate bstate-iterable collector]
+  (let [event (json/decode-smile smile-data true)
+        ks (parse-kstate kstate)]
+    (log/info "process:" event)
+    (operate-kstate kstate event)
     (.collect collector (json/encode-smile (enrich event bstate-iterable)))))
 
 (defn -processBroadcast[this smile-data bstate collector]
   (let [event (json/decode-smile smile-data true)]
-    (log/info "[broadcast]" event)
+    (log/info "process-broadcast:" event)
     (update-bstate-counter bstate)
-    (operate bstate event)
+    (operate-bstate bstate event)
     ))
