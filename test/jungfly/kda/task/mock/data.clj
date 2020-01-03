@@ -1,18 +1,26 @@
 (ns jungfly.kda.task.mock.data
+  (:require [clojure.tools.logging :as log]
+            [camel-snake-kebab.core :as csk]
+            [cheshire.core :as json]))
+
+(defn parse[d]
+  (json/parse-string (json/generate-string d) (fn[x] (keyword (csk/->camelCase x))) )
   )
-(defn picture-update[]
+
+(defn picture-update
   {
-   :OPTYPE "SQL COMPUPDATE",
-   :EVENTTABLE "ADLOAD.PICTURES",
-   :EVENTTIMESTAMP "2020-01-02 19:53:16.015448",
-   :LAG "5",
-   :PICTURE_ID "696391171",
-   :VEHICLE_ID "196091849",
-   :PRIMARY "0",
-   :IS_HIDDEN "1",
-   :FILE_PATH "98lGS3sJenIuoUpEypAjI9p9Jr759N1XsSs84GBp9N8.jpg",
-   :ACTIVE "1"
+       :OPTYPE         "SQL COMPUPDATE",
+       :EVENTTABLE     "ADLOAD.PICTURES",
+       :EVENTTIMESTAMP "2020-01-02 19:53:16.015448",
+       :LAG            "5",
+       :PICTURE_ID     "696391171",
+       :VEHICLE_ID     "196091849",
+       :PRIMARY        "0",
+       :IS_HIDDEN      "1",
+       :FILE_PATH      "98lGS3sJenIuoUpEypAjI9p9Jr759N1XsSs84GBp9N8.jpg",
+       :ACTIVE         "1"
    })
+
 
 
 (defn vehicle-update[]

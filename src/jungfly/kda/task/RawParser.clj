@@ -1,5 +1,6 @@
 (ns jungfly.kda.task.RawParser
   (:require [clojure.tools.logging :as log]
+            [camel-snake-kebab.core :as csk]
             [cheshire.core :as json])
   (:gen-class
     :extends jungfly.kda.task.AbstractRawParser
@@ -9,8 +10,8 @@
 
 (defn -processElement[this value context collector]
     (try
-       (let [event (json/parse-string value true)
-             table (:EVENTTABLE event)
+       (let [event (json/parse-string value (fn[x] (keyword (csk/->camelCase x))))
+             table (:eventtable event)
              smile (json/encode-smile event)]
          (case table
            ("ADLOAD.VEHICLES" "ADLOAD.VEHICLE_ADDITIONAL_INFOS" "ADLOAD.CURRENT_AUCTIONS" "ADLOAD.PICTURES") (.collect collector smile)

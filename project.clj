@@ -9,6 +9,7 @@
                  [com.amazonaws/aws-kinesisanalytics-flink "1.1.0"]
                  [org.apache.flink/flink-connector-kinesis_2.11 "1.8.2"]
                  [org.apache.flink/flink-streaming-java_2.11 "1.8.2"]
+                 [camel-snake-kebab "0.4.1"]
                  ]
   :java-source-paths ["main/java"]
   :javac-options     ["-target" "1.8" "-source" "1.8"]
