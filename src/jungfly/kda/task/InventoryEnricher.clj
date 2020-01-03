@@ -61,16 +61,16 @@
       (json/decode-smile v true))))
 
 (defn new-kstate-value[event]
-  (-> {:id (:id event)}
+  (-> {:VEHICLE_ID (:VEHICLE_ID event)}
       (assoc :status "new")
       (assoc :created (System/currentTimeMillis))
-      (assoc :history [event])))
+      (assoc :history [{:table (:EVENTTABLE event)}])))
 
 (defn updated-kstate-value[ks event]
   (-> ks
       (assoc :status "updated")
       (assoc :updated (System/currentTimeMillis))
-      (update :history conj event)))
+      (update :history conj {:table (:EVENTTABLE event)})))
 
 (defn operate-kstate[kstate event]
   (let [op (:OPTYPE event)]
@@ -95,7 +95,7 @@
   (let [event (json/decode-smile smile-data true)
         ks (parse-kstate kstate)]
     (log/info "process:" event)
-   ; (operate-kstate kstate event)
+    (operate-kstate kstate event)
     (.collect collector (json/encode-smile (enrich event kstate bstate-iterable)))))
 
 (defn -processBroadcast[this smile-data bstate collector]

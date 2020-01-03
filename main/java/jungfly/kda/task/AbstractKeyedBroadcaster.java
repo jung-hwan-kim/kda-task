@@ -1,9 +1,7 @@
 package jungfly.kda.task;
 
-import org.apache.flink.api.common.state.BroadcastState;
-import org.apache.flink.api.common.state.MapStateDescriptor;
-import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.state.*;
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -17,6 +15,12 @@ import java.util.Map;
 
 abstract public class AbstractKeyedBroadcaster extends KeyedBroadcastProcessFunction<String, byte[], byte[], byte[]> {
 
+    public final StateTtlConfig ttlConfig = StateTtlConfig
+            .newBuilder(Time.days(1))
+            .setUpdateType(StateTtlConfig.UpdateType.OnCreateAndWrite)
+            .setStateVisibility(StateTtlConfig.StateVisibility.ReturnExpiredIfNotCleanedUp)
+            .cleanupInBackground()
+            .build();
 
     public final MapStateDescriptor<String, byte[]> bstateDescriptor =
             new MapStateDescriptor<>(
@@ -31,6 +35,9 @@ abstract public class AbstractKeyedBroadcaster extends KeyedBroadcastProcessFunc
 
     private transient ValueState<byte[]> kstate;
 
+    public AbstractKeyedBroadcaster() {
+        kstateDescriptor.enableTimeToLive(ttlConfig);
+    }
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
