@@ -57,7 +57,6 @@
 
 (defn enrich[event kstate bstate-iterable]
   (-> event
-      (assoc :bstate (describe-bstate-iterable bstate-iterable))
       (assoc :kstate (ks/parse-kstate kstate))
       ))
 
@@ -65,7 +64,8 @@
   (let [event (json/decode-smile smile-data true)]
     (log/info "process:" event)
     (ks/operate-kstate kstate event)
-    (.collect collector (json/encode-smile (enrich event kstate bstate-iterable)))))
+    (log/info "process bstate:" (describe-bstate-iterable bstate-iterable)))
+    (.collect collector (json/encode-smile (ks/parse-kstate kstate))))
 
 (defn -processBroadcast[this smile-data bstate collector]
   (let [event (json/decode-smile smile-data true)]

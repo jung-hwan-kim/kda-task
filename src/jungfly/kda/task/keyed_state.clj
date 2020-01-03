@@ -5,7 +5,7 @@
 (defn parse-kstate[kstate-obj]
   (let [v (.value kstate-obj)]
     (if (nil? v)
-      {:history []}
+      {:history [] :picture [] :auction []}
       (json/decode-smile v true))))
 
 (defn update-kstate-obj[kstate-obj kstate]
@@ -15,6 +15,13 @@
   (-> (merge kstate event)
       (update :history conj {:table (:eventtable event) :added (System/currentTimeMillis)})))
 
+(defn picture-event[kstate event]
+  (-> (merge kstate)
+      (update :picture conj event)))
+
+(defn auction-event[kstate event]
+  (-> (merge kstate)
+      (update :auction conj event)))
 
 (defn operate-kstate[kstate-obj event]
   (let [eventtable (:eventtable event)
