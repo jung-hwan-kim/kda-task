@@ -89,20 +89,19 @@
         c (new MockCollector)
         ks (new MockValueState)
         bs (new MockBroadcastState)
-        data (data/vehicle-update)]
+        data (data/parse (data/vehicle-update))]
     (testing "Testing add, update remove flow"
       (let [ collected (do-process2 f ks bs c data)
             bstate (parse-bstate bs)
             kstate (parse-kstate ks)]
         (log/info collected)
         (is (= 1 (count collected)))
-        (log/info "KSTATE" kstate)
-        )
-      (let [ collected (do-process2 f ks s c data)
+        (println kstate))
+      (let [ collected (do-process2 f ks bs c data)
             bstate (parse-bstate bs)
             kstate (parse-kstate ks)]
         (log/info collected)
         (is (= 2 (count collected)))
-        (log/info "KSTATE" kstate)
-        )
+        (println "** KSTATE **" kstate)
+        kstate)
       )))

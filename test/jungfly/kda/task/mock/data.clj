@@ -7,7 +7,7 @@
   (json/parse-string (json/generate-string d) (fn[x] (keyword (csk/->camelCase x))) )
   )
 
-(defn picture-update
+(defn picture-update []
   {
        :OPTYPE         "SQL COMPUPDATE",
        :EVENTTABLE     "ADLOAD.PICTURES",
