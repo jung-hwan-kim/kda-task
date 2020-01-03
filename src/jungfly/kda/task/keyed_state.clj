@@ -29,5 +29,8 @@
     (case eventtable
       ("ADLOAD.VEHICLES" "ADLOAD.VEHICLE_ADDITIONAL_INFOS") (let [new-kstate (vehicle-event kstate event)]
                                                               (update-kstate-obj kstate-obj new-kstate))
-      (log/warn "Unsupported eventtable:" eventtable "->" event))
-      ))
+      "ADLOAD.PICTURES" (let [new-kstate (picture-event kstate event)]
+                          (update-kstate-obj kstate-obj new-kstate))
+      "ADLOAD.CURRENT_AUCTIONS" (let [new-kstate (auction-event kstate event)]
+                          (update-kstate-obj kstate-obj new-kstate))
+      (log/warn "Unsupported eventtable:" eventtable "->" event))))
