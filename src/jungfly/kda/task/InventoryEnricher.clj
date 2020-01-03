@@ -73,14 +73,14 @@
       (update :history conj event)))
 
 (defn operate-kstate[kstate event]
-  (let [op (:op event)]
+  (let [op (:OPTYPE event)]
     (if-let [ks (parse-kstate kstate)]
       (case op
-        "remove" (do
+        "SQL COMPDELETE" (do
                    (.clear kstate))
-        "update" (let [updated (updated-kstate-value ks event)]
+        "SQL COMPUPDATE" (let [updated (updated-kstate-value ks event)]
                    (.update kstate (json/encode-smile updated)))
-        (log/error "INVALID B-STATE OPERATION:" + event))
+        (log/error "INVALID K-STATE OPERATION:" + event))
       (do
         (.update kstate (json/encode-smile (new-kstate-value event)))))))
 
@@ -95,7 +95,7 @@
   (let [event (json/decode-smile smile-data true)
         ks (parse-kstate kstate)]
     (log/info "process:" event)
-    (operate-kstate kstate event)
+   ; (operate-kstate kstate event)
     (.collect collector (json/encode-smile (enrich event kstate bstate-iterable)))))
 
 (defn -processBroadcast[this smile-data bstate collector]

@@ -8,16 +8,20 @@
     :main false))
 
 (defn -processElement[this value context collector]
-  (let [event (json/parse-string value true)
-        type (:type event)
-        smile (json/encode-smile event)]
-    (log/info type)
-    (case type
-      "actor" (.collect collector smile)
-      "rule" (do
-               (log/info "rule:" event)
-               (.output context (.getRuleTag this) smile)
-               )
-      (do
-        (log/info "error:" event)
-        (.output context (.getErrorTag this) smile)))))
+    (try
+       (let [event (json/parse-string value true)
+             table (:EVENTTABLE event)
+             smile (json/encode-smile event)]
+         (case table
+           ("ADLOAD.VEHICLES" "ADLOAD.VEHICLE_ADDITIONAL_INFOS" "ADLOAD.CURRENT_AUCTIONS" "ADLOAD.PICTURES") (.collect collector smile)
+           "rule" (do
+                    (log/info "rule:" event)
+                    (.output context (.getRuleTag this) smile)
+                    )
+           (do
+             (log/error "unsupported table name:" table)
+             (.output context (.getErrorTag this) smile))))
+       (catch Exception e
+         (log/error value)
+         (log/error (.getMessage e))
+         )))

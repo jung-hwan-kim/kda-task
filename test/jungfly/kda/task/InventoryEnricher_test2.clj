@@ -1,8 +1,7 @@
-(ns jungfly.kda.task.InventoryEnricher-test
+(ns jungfly.kda.task.InventoryEnricher-test2
   (:require [clojure.test :refer :all]
             [clojure.tools.logging :as log]
-            [cheshire.core :as json]
-            [jungfly.kda.task.mock.data :as data])
+            [cheshire.core :as json])
   (:import (jungfly.kda.task.mock MockCollector MockBroadcastState MockValueState)
            (jungfly.kda.task InventoryEnricher)))
 
@@ -18,14 +17,6 @@
   (.getCollected collector))
 
 
-
-
-(defn do-process2 [function kstate bstate collector data]
-  (.process function (json/encode-smile data)
-            kstate (.immutableEntries bstate) collector)
-  (.getCollected collector))
-
-
 (defn parse-bstate[bstate]
   (into {} (map (fn[x] {(.getKey x) (json/decode-smile (.getValue x) true)}) (seq (.entries bstate)))))
 
@@ -35,8 +26,7 @@
         ks (new MockValueState)
         bs (new MockBroadcastState)]
     (testing "Testing add, update remove flow"
-      (let [data (data/vehicle-update)
-            collected (do-process2 f ks bs c data)
+      (let [collected (do-process f ks bs c "actor" "add" "1")
             bstate (parse-bstate bs)]
         (log/info collected)
         (is (= 1 (count collected)))
@@ -88,21 +78,26 @@
   (let [f (new InventoryEnricher)
         c (new MockCollector)
         ks (new MockValueState)
-        s (new MockBroadcastState)
-        data (data/vehicle-update)]
+        s (new MockBroadcastState)]
     (testing "Testing add, update remove flow"
-      (let [ collected (do-process2 f ks s c data)
+      (let [ collected (do-process-broadcast f s c "rule" "add" "1024")
+            bstate (parse-bstate s)]
+        (log/info collected)
+        (is (= 0 (count collected)))
+        (log/info bstate)
+        (is (= 1 (get-in bstate ["aggr" :count]))))
+      (let [ collected (do-process f ks s c "actor" "add" "1")
             bstate (parse-bstate s)
             kstate (parse-kstate ks)]
         (log/info collected)
         (is (= 1 (count collected)))
         (log/info "KSTATE" kstate)
-        )
-      (let [ collected (do-process2 f ks s c data)
+        (log/info "BSTATE" bstate))
+      (let [ collected (do-process f ks s c "actor" "update" "1")
             bstate (parse-bstate s)
             kstate (parse-kstate ks)]
         (log/info collected)
         (is (= 2 (count collected)))
         (log/info "KSTATE" kstate)
-        )
+        (log/info "BSTATE" bstate))
       )))
