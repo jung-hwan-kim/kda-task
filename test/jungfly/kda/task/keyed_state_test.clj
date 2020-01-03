@@ -7,18 +7,16 @@
   (:import (jungfly.kda.task.mock MockValueState)))
 
 (deftest enrich-test
-  (let [ks (new MockValueState)
-        data (data/parse (data/vehicle-update))]
+  (let [kstate-obj (new MockValueState)]
     (testing "Testing keyed state"
-      (let [kstate (parse-kstate ks)]
-        (log/info collected)
-        (is (= 1 (count collected)))
-        (println kstate))
-      (let [ collected (do-process2 f ks bs c data)
-            bstate (parse-bstate bs)
-            kstate (parse-kstate ks)]
-        (log/info collected)
-        (is (= 2 (count collected)))
-        (println "** KSTATE **" kstate)
-        kstate)
+      (let [event (data/parse (data/vehicle-update))
+            result (operate-kstate kstate-obj event)
+            kstate (parse-kstate kstate-obj)]
+        (is (= 1 (count (:history kstate))))
+        (log/info "** KSTATE 1 **" kstate))
+      (let [event (data/parse (data/vehicle-addtional-info-update))
+            result (operate-kstate kstate-obj event)
+            kstate (parse-kstate kstate-obj)]
+        (is (= 2 (count (:history kstate))))
+        (log/info "** KSTATE 2 **" kstate))
       )))
