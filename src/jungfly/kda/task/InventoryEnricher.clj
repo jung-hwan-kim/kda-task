@@ -4,6 +4,7 @@
             [cheshire.core :as json])
   (:gen-class
     :extends jungfly.kda.task.AbstractKeyedBroadcaster
+    :exposes {sideTag {:get getSideTag}}
     :main false))
 
 (defn new-bstate-value[event]
@@ -64,12 +65,13 @@
   (let [event (json/decode-smile smile-data true)]
     (log/info "process:" event)
     (ks/operate-kstate kstate event)
-    (log/info "process bstate:" (describe-bstate-iterable bstate-iterable)))
-    (.collect collector (json/encode-smile (ks/parse-kstate kstate))))
+    (log/info "process bstate:" (describe-bstate-iterable bstate-iterable))
+    (.collect collector (json/encode-smile (ks/parse-kstate kstate)))
+    (json/generate-string (ks/parse-kstate kstate))))
 
 (defn -processBroadcast[this smile-data bstate collector]
   (let [event (json/decode-smile smile-data true)]
     (log/info "process-broadcast:" event)
     (update-bstate-counter bstate)
     (operate-bstate bstate event)
-    ))
+    (json/generate-string (describe-bstate bstate))))

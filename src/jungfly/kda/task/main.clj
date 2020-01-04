@@ -62,7 +62,6 @@
   (let [env (Configurator/configurePrototype07 (new RawParser)
                                                (new Selector)
                                                (new LogMapFunction)
-                                               (new LogMapFunction)
                                                (new InventoryEnricher))]
     (.execute env "Prototype-07")))
 

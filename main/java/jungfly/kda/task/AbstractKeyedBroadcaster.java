@@ -8,12 +8,14 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.co.KeyedBroadcastProcessFunction;
 import org.apache.flink.util.Collector;
+import org.apache.flink.util.OutputTag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
 abstract public class AbstractKeyedBroadcaster extends KeyedBroadcastProcessFunction<String, byte[], byte[], byte[]> {
+    public final OutputTag<String> sideTag = new OutputTag<String>("side-tag"){};
 
     public final StateTtlConfig ttlConfig = StateTtlConfig
             .newBuilder(Time.days(1))
@@ -47,17 +49,25 @@ abstract public class AbstractKeyedBroadcaster extends KeyedBroadcastProcessFunc
 
     private static final Logger log = LoggerFactory.getLogger(AbstractKeyedBroadcaster.class);
 
-    abstract public void process(byte[] smile, ValueState<byte[]> kstate, Iterable<Map.Entry<String, byte[]>> pstateIterable, Collector<byte[]> collector) throws Exception;
+    abstract public String process(byte[] smile, ValueState<byte[]> kstate, Iterable<Map.Entry<String, byte[]>> pstateIterable, Collector<byte[]> collector) throws Exception;
+
 
     @Override
     public void processElement(byte[] rawEvent, ReadOnlyContext readOnlyContext, Collector<byte[]> collector) throws Exception {
-        process(rawEvent, kstate, readOnlyContext.getBroadcastState(bstateDescriptor).immutableEntries(), collector);
+
+        String result = process(rawEvent, kstate, readOnlyContext.getBroadcastState(bstateDescriptor).immutableEntries(), collector);
+        if (result != null) {
+            readOnlyContext.output(sideTag, result);
+        }
     }
 
-    abstract public void processBroadcast(byte[] smile, BroadcastState<String, byte[]> state, Collector<byte[]> collector) throws Exception;
+    abstract public String processBroadcast(byte[] smile, BroadcastState<String, byte[]> state, Collector<byte[]> collector) throws Exception;
 
     @Override
     public void processBroadcastElement(byte[] rawEvent, Context context, Collector<byte[]> collector) throws Exception {
-        processBroadcast(rawEvent, context.getBroadcastState(bstateDescriptor), collector);
+        String result = processBroadcast(rawEvent, context.getBroadcastState(bstateDescriptor), collector);
+        if (result != null) {
+            context.output(sideTag, result);
+        }
     }
 }

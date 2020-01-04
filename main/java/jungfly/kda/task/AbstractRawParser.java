@@ -8,7 +8,7 @@ abstract public class AbstractRawParser extends ProcessFunction<String, byte[]> 
     public final OutputTag<byte[]> ruleTag = new OutputTag<byte[]>("rule-tag"){};
 
 
-    public final OutputTag<byte[]> errorTag = new OutputTag<byte[]>("error-tag"){};
+    public final OutputTag<String> errorTag = new OutputTag<String>("error-tag"){};
 
 
 }

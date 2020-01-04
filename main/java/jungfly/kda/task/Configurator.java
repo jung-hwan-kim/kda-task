@@ -20,7 +20,8 @@ import java.util.Properties;
 public class Configurator {
     private static final String REGION = "us-east-1";
     private static final String INPUT_STREAM_NAME = "ds-inventory-raw";
-    private static final String OUTPUT_STREAM_NAME = "ds-inventory-out";
+    private static final String OUTPUT_STREAM_NAME = "ds-inventory-master";
+    private static final String SIDE_OUTPUT_STREAM_NAME = "ds-inventory-out";
 
     private static final Logger log = LoggerFactory.getLogger(Configurator.class);
 
@@ -32,6 +33,20 @@ public class Configurator {
 
     public static FlinkKinesisProducer<String> createSink() throws IOException {
         Properties producerConfig = getProducerConfig();
+        String name = producerConfig.getProperty("stream.name");
+        String defaultPartition = producerConfig.getProperty("default.partition");
+        FlinkKinesisProducer<String> sink = new FlinkKinesisProducer<>(new SimpleStringSchema(), producerConfig);
+        sink.setDefaultStream(name);
+        sink.setDefaultPartition(defaultPartition);
+        return sink;
+    }
+
+    public static FlinkKinesisProducer<String> createSideOutSink() throws IOException {
+        Properties producerConfig = new Properties();
+        producerConfig.setProperty(ConsumerConfigConstants.AWS_REGION, REGION);
+        producerConfig.setProperty("AggregationEnabled", "false");
+        producerConfig.setProperty("stream.name", SIDE_OUTPUT_STREAM_NAME);
+        producerConfig.setProperty("default.partition", "0");
         String name = producerConfig.getProperty("stream.name");
         String defaultPartition = producerConfig.getProperty("default.partition");
         FlinkKinesisProducer<String> sink = new FlinkKinesisProducer<>(new SimpleStringSchema(), producerConfig);
@@ -100,6 +115,7 @@ public class Configurator {
         final OutputTag<byte[]> ruleTag = new OutputTag<byte[]>("rule-tag"){};
         final OutputTag<byte[]> errorTag = new OutputTag<byte[]>("error-tag"){};
         SinkFunction<String> out = createSink();
+        SinkFunction<String> sideOut = createSideOutSink();
         DataStreamSource<String> in = env.addSource(createSource());
         in.name("in");
         SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("raw-parse");
@@ -109,8 +125,8 @@ public class Configurator {
 
         DataStream<byte[]> ruleStream = mainStream.getSideOutput(parser.ruleTag);
 
-        DataStream<byte[]> errorStream = mainStream.getSideOutput(parser.errorTag);
-        errorStream.map(errorLogFunction.name("ERR")).name("err").addSink(out).name("out");
+        DataStream<String> errorStream = mainStream.getSideOutput(parser.errorTag);
+        errorStream.addSink(sideOut).name("out");
 
         SingleOutputStreamOperator<byte[]> enriched = mainStream2.connect(ruleStream).flatMap(coEnricher).name("rule");
         enriched.setParallelism(1);
@@ -125,18 +141,18 @@ public class Configurator {
                                                                   AbstractEnricher opEnricher,
                                                                   AbstractBroadcaster broadcaster) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        final OutputTag<byte[]> ruleTag = new OutputTag<byte[]>("rule-tag"){};
-        final OutputTag<byte[]> errorTag = new OutputTag<byte[]>("error-tag"){};
         SinkFunction<String> out = createSink();
         DataStreamSource<String> in = env.addSource(createSource());
+        SinkFunction<String> sideOut = createSideOutSink();
+
         in.name("in");
         SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("raw-parse");
         SingleOutputStreamOperator<byte[]> mainStream2 = mainStream.flatMap(opEnricher).name("actor");
 
 
         DataStream<byte[]> ruleStream = mainStream.getSideOutput(parser.ruleTag);
-        DataStream<byte[]> errorStream = mainStream.getSideOutput(parser.errorTag);
-        errorStream.map(errorLogFunction.name("ERR")).name("err").addSink(out).name("out");
+        DataStream<String> errorStream = mainStream.getSideOutput(parser.errorTag);
+        errorStream.addSink(sideOut).name("out");
 
 //        MapStateDescriptor<String, byte[]> ruleStateDescriptor = new MapStateDescriptor<String, byte[]>(
 //                "RulesBroadcastState", BasicTypeInfo.STRING_TYPE_INFO, TypeInformation.of(new TypeHint<byte[]>() {}));
@@ -150,25 +166,26 @@ public class Configurator {
     public static StreamExecutionEnvironment configurePrototype07(AbstractRawParser parser,
                                                                   AbstractSelector selector,
                                                                   AbstractLogMapFunction logFunction,
-                                                                  AbstractLogMapFunction errorLogFunction,
                                                                   AbstractKeyedBroadcaster inventoryEnricher) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        final OutputTag<byte[]> ruleTag = new OutputTag<byte[]>("rule-tag"){};
-        final OutputTag<byte[]> errorTag = new OutputTag<byte[]>("error-tag"){};
         SinkFunction<String> out = createSink();
+        SinkFunction<String> sideOut = createSideOutSink();
         DataStreamSource<String> in = env.addSource(createSource());
         in.name("in");
 
         SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("parse");
         DataStream<byte[]> bStream = mainStream.getSideOutput(parser.ruleTag);
-        DataStream<byte[]> errorStream = mainStream.getSideOutput(parser.errorTag);
-        errorStream.map(errorLogFunction.name("ERR")).name("err").addSink(out).name("out");
+        DataStream<String> errorStream = mainStream.getSideOutput(parser.errorTag);
+        errorStream.addSink(sideOut).name("side-out");
 
         KeyedStream<byte[], String> keyedStream = mainStream.keyBy(selector);
         BroadcastStream<byte[]> broadcastStream = bStream.broadcast(inventoryEnricher.bstateDescriptor);
 
         SingleOutputStreamOperator<byte[]> enriched = keyedStream.connect(broadcastStream).process(inventoryEnricher).name("inventory");
         enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
+
+        DataStream<String> sideStream = enriched.getSideOutput(inventoryEnricher.sideTag);
+        sideStream.addSink(sideOut).name("side-out");
         return env;
     }
 }
