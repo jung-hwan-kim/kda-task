@@ -89,19 +89,22 @@
         c (new MockCollector)
         ks (new MockValueState)
         bs (new MockBroadcastState)
-        data (data/parse (data/vehicle-update))]
+        vehicleId "12345678"
+        data (data/parse (data/vehicle-update vehicleId))]
     (testing "Testing add, update remove flow"
       (let [ collected (do-process2 f ks bs c data)
             bstate (parse-bstate bs)
             kstate (parse-kstate ks)]
         (log/info collected)
         (is (= 1 (count collected)))
+        (is (= vehicleId (:vehicleId kstate)))
         (println kstate))
       (let [ collected (do-process2 f ks bs c data)
             bstate (parse-bstate bs)
             kstate (parse-kstate ks)]
         (log/info collected)
         (is (= 2 (count collected)))
+        (is (= vehicleId (:vehicleId kstate)))
         (println "** KSTATE **" kstate)
         kstate)
       )))
