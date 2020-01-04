@@ -3,20 +3,32 @@
             [clojure.test :refer :all]
             [clojure.tools.logging :as log]
             [cheshire.core :as json]
-            [jungfly.kda.task.mock.data :as data])
+            [jungfly.kda.task.mock.event :as data])
   (:import (jungfly.kda.task.mock MockValueState)))
 
 (deftest enrich-test
-  (let [kstate-obj (new MockValueState)]
+  (let [kstate-obj (new MockValueState)
+        vehicleId "123456789"]
     (testing "Testing keyed state"
-      (let [event (data/parse (data/vehicle-update))
+      (let [event (data/parse (data/vehicle-update vehicleId))
             result (operate-kstate kstate-obj event)
             kstate (parse-kstate kstate-obj)]
         (is (= 1 (count (:history kstate))))
+        (is (= "15000" (:mileage kstate)))
+        (is (= vehicleId (:vehicleId kstate)))
         (log/info "** KSTATE 1 **" kstate))
-      (let [event (data/parse (data/vehicle-addtional-info-update))
+      (let [event (data/parse (data/vehicle-addtional-info-update vehicleId))
             result (operate-kstate kstate-obj event)
             kstate (parse-kstate kstate-obj)]
         (is (= 2 (count (:history kstate))))
+        (is (= "15000" (:mileage kstate)))
+        (is (= vehicleId (:vehicleId kstate)))
+        (log/info "** KSTATE 2 **" kstate))
+      (let [event (data/parse (data/vehicle-addtional-info-update vehicleId))
+            result (operate-kstate kstate-obj event)
+            kstate (parse-kstate kstate-obj)]
+        (is (= 3 (count (:history kstate))))
+        (is (= "15000" (:mileage kstate)))
+        (is (= vehicleId (:vehicleId kstate)))
         (log/info "** KSTATE 2 **" kstate))
       )))

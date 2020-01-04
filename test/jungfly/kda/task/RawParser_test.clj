@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [clojure.tools.logging :as log]
             [cheshire.core :as json]
-            [jungfly.kda.task.mock.data :as data])
+            [jungfly.kda.task.mock.event :as data])
   (:import (jungfly.kda.task.mock MockCollector MockBroadcastState MockValueState)
            (jungfly.kda.task RawParser)
            ))
