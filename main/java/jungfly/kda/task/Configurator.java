@@ -42,15 +42,12 @@ public class Configurator {
     }
 
     public static FlinkKinesisProducer<String> createSideOutSink() throws IOException {
-        Properties producerConfig = new Properties();
-        producerConfig.setProperty(ConsumerConfigConstants.AWS_REGION, REGION);
-        producerConfig.setProperty("AggregationEnabled", "false");
-        producerConfig.setProperty("stream.name", SIDE_OUTPUT_STREAM_NAME);
-        producerConfig.setProperty("default.partition", "0");
-        String name = producerConfig.getProperty("stream.name");
+        Properties producerConfig = getProducerConfig();
+        String name = producerConfig.getProperty("side.stream.name");
         String defaultPartition = producerConfig.getProperty("default.partition");
         FlinkKinesisProducer<String> sink = new FlinkKinesisProducer<>(new SimpleStringSchema(), producerConfig);
         sink.setDefaultStream(name);
+        sink.setDefaultPartition(defaultPartition);
         sink.setDefaultPartition(defaultPartition);
         return sink;
     }
@@ -78,6 +75,7 @@ public class Configurator {
             producerConfig.setProperty(ConsumerConfigConstants.AWS_REGION, REGION);
             producerConfig.setProperty("AggregationEnabled", "false");
             producerConfig.setProperty("stream.name", OUTPUT_STREAM_NAME);
+            producerConfig.setProperty("side.stream.name", SIDE_OUTPUT_STREAM_NAME);
             producerConfig.setProperty("default.partition", "0");
         }
         return producerConfig;
