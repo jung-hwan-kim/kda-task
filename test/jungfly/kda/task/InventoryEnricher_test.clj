@@ -17,17 +17,13 @@
                      bstate collector)
   (.getCollected collector))
 
-
-
-
 (defn do-process2 [function kstate bstate collector data]
   (.process function (json/encode-smile data)
             kstate (.immutableEntries bstate) collector)
   (.getCollected collector))
 
-
-(defn parse-bstate[bstate]
-  (into {} (map (fn[x] {(.getKey x) (json/decode-smile (.getValue x) true)}) (seq (.entries bstate)))))
+(defn parse-bstate[bstate-obj]
+  (into {} (map (fn[x] {(.getKey x) (json/decode-smile (.getValue x) true)}) (seq (.entries bstate-obj)))))
 
 (deftest b-test
   (let [f (new InventoryEnricher)
@@ -78,8 +74,8 @@
         (is (= 1 (count bstate))))
       )))
 
-(defn parse-kstate[kstate]
-  (let [v (.value kstate)]
+(defn parse-kstate[kstate-obj]
+  (let [v (.value kstate-obj)]
     (if (nil? v)
       nil
       (json/decode-smile v true))))
@@ -87,22 +83,55 @@
 (deftest enrich-test
   (let [f (new InventoryEnricher)
         c (new MockCollector)
-        ks (new MockValueState)
-        bs (new MockBroadcastState)
+        kso (new MockValueState)
+        bso (new MockBroadcastState)
         vehicleId "12345678"
         data (data/parse (data/vehicle-update vehicleId))]
     (testing "Testing add, update remove flow"
-      (let [ collected (do-process2 f ks bs c data)
-            bstate (parse-bstate bs)
-            kstate (parse-kstate ks)]
+      (let [result (.process f (json/encode-smile data) kso (.immutableEntries bso) c)
+            collected (.getCollected c)
+            bstate (parse-bstate bso)
+            kstate (parse-kstate kso)]
         (log/info collected)
+        (is (nil? result))
         (is (= 1 (count collected)))
         (is (= vehicleId (:vehicleId kstate)))
         (println kstate))
-      (let [ collected (do-process2 f ks bs c data)
-            bstate (parse-bstate bs)
-            kstate (parse-kstate ks)]
+      (let [result (.process f (json/encode-smile data) kso (.immutableEntries bso) c)
+            collected (.getCollected c)
+            bstate (parse-bstate bso)
+            kstate (parse-kstate kso)]
         (log/info collected)
+        (is (nil? result))
+        (is (= 2 (count collected)))
+        (is (= vehicleId (:vehicleId kstate)))
+        (println "** KSTATE **" kstate)
+        kstate)
+      )))
+
+(deftest enrich-with-debug-test
+  (let [f (new InventoryEnricher)
+        c (new MockCollector)
+        kso (new MockValueState)
+        bso (new MockBroadcastState)
+        vehicleId "12345678"
+        data (assoc (data/parse (data/vehicle-update vehicleId)) :debug true)]
+    (testing "Testing add, update remove flow"
+      (let [result (.process f (json/encode-smile data) kso (.immutableEntries bso) c)
+            collected (.getCollected c)
+            bstate (parse-bstate bso)
+            kstate (parse-kstate kso)]
+        (log/info collected)
+        (is (not (nil? result)))
+        (is (= 1 (count collected)))
+        (is (= vehicleId (:vehicleId kstate)))
+        (println kstate))
+      (let [result (.process f (json/encode-smile data) kso (.immutableEntries bso) c)
+            collected (.getCollected c)
+            bstate (parse-bstate bso)
+            kstate (parse-kstate kso)]
+        (log/info collected)
+        (is ((not nil? result)))
         (is (= 2 (count collected)))
         (is (= vehicleId (:vehicleId kstate)))
         (println "** KSTATE **" kstate)

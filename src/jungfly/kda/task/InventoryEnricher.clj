@@ -56,18 +56,37 @@
   )
 
 
-(defn enrich[event kstate bstate-iterable]
-  (-> event
-      (assoc :kstate (ks/parse-kstate kstate))
-      ))
+(defn parse-kstate[kstate-obj]
+  (let [v (.value kstate-obj)]
+    (if (nil? v)
+      nil
+      (json/decode-smile v true))))
 
-(defn -process[this smile-data kstate bstate-iterable collector]
-  (let [event (json/decode-smile smile-data true)]
+(defn update-kstate-obj[kstate-obj kstate]
+  (.update kstate-obj (json/encode-smile kstate)))
+
+
+(defn -process[this smile-data kstate-obj bstate-iterable collector]
+  (let [event (json/decode-smile smile-data true)
+        kstate (parse-kstate kstate-obj)
+        bstate (describe-bstate-iterable bstate-iterable)
+        eventtable (:eventtable event)]
     (log/info "process:" event)
-    (ks/operate-kstate kstate event)
-    (log/info "process bstate:" (describe-bstate-iterable bstate-iterable))
-    (.collect collector (json/encode-smile (ks/parse-kstate kstate)))
-    (json/generate-string (ks/parse-kstate kstate))))
+    (if (= eventtable "HEARTBEAT_K")
+      (case (:action event)
+        "cleanup" (do
+                    (.clear kstate-obj)
+                    (.collect collector (json/encode-smile (assoc event :cleaned-up kstate))))
+        "kstate" (.collect collector (json/encode-smile (assoc event :kstate kstate)))
+        "bstate" (.collect collector (json/encode-smile (assoc event :bstate bstate)))
+        (.collect collector smile-data))
+      (if-let [new-kstate (ks/transform-kstate kstate event)]
+        (do
+          (update-kstate-obj kstate-obj new-kstate)
+          (.collect collector (json/encode-smile new-kstate)))
+        (log/info "NO UPDATE")))
+    (if (= (:debug event) true)
+        (json/generate-string {:kstate (parse-kstate kstate-obj) :bstate bstate}))))
 
 (defn -processBroadcast[this smile-data bstate collector]
   (let [event (json/decode-smile smile-data true)]

@@ -9,19 +9,33 @@
 
 (defn picture-update [vehicleId]
   {
-       :OPTYPE         "SQL COMPUPDATE",
-       :EVENTTABLE     "ADLOAD.PICTURES",
-       :EVENTTIMESTAMP "2020-01-02 19:53:16.015448",
-       :LAG            "5",
-       :PICTURE_ID     "696391171",
-       :VEHICLE_ID     vehicleId,
-       :PRIMARY        "0",
-       :IS_HIDDEN      "1",
-       :FILE_PATH      "98lGS3sJenIuoUpEypAjI9p9Jr759N1XsSs84GBp9N8.jpg",
-       :ACTIVE         "1"
+   :OPTYPE         "SQL COMPUPDATE",
+   :EVENTTABLE     "ADLOAD.PICTURES",
+   :EVENTTIMESTAMP "2020-01-02 19:53:16.015448",
+   :LAG            "5",
+   :PICTURE_ID     "696391171",
+   :VEHICLE_ID     vehicleId,
+   :PRIMARY        "0",
+   :IS_HIDDEN      "1",
+   :FILE_PATH      "98lGS3sJenIuoUpEypAjI9p9Jr759N1XsSs84GBp9N8.jpg",
+   :ACTIVE         "1",
+   :MODE "DEBUG" ; side, side+master, side with report, side+master with report
    })
 
-
+(defn heartbeat [vehicleId]
+  {
+   :OPTYPE "HEARTBEAT"
+   :EVENTTABLE "HEARTBEAT"
+   :VEHICLE_ID vehicleId
+   }
+  )
+(defn heartbeat-b [vehicleId]
+  {
+   :OPTYPE "HEARTBEAT"
+   :EVENTTABLE "HEARTBEAT"
+   :VEHICLE_ID vehicleId
+   }
+  )
 
 (defn vehicle-update[vehicleId]
   {

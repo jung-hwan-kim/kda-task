@@ -13,13 +13,10 @@
        (let [event (json/parse-string value (fn[x] (keyword (csk/->camelCase x))))
              table (:eventtable event)
              smile (json/encode-smile event)]
-         (log/info ">> " table)
          (case table
-           ("ADLOAD.VEHICLES" "ADLOAD.VEHICLE_ADDITIONAL_INFOS" "ADLOAD.CURRENT_AUCTIONS" "ADLOAD.PICTURES") (.collect collector smile)
-           "rule" (do
-                    (log/info "rule:" event)
-                    (.output context (.getRuleTag this) smile)
-                    )
+           ("ADLOAD.VEHICLES" "ADLOAD.VEHICLE_ADDITIONAL_INFOS" "ADLOAD.CURRENT_AUCTIONS" "ADLOAD.PICTURES" "HEARTBEAT_K") (.collect collector smile)
+           ("rule" "HEARTBEAT_B") (do
+                                    (.output context (.getRuleTag this) smile))
            (do
              (log/error "unsupported table name:" table)
              (.output context (.getErrorTag this) "Unsupported TABLE name!"))))

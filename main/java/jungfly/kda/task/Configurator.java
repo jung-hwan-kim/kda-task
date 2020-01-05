@@ -19,9 +19,9 @@ import java.util.Properties;
 
 public class Configurator {
     private static final String REGION = "us-east-1";
-    private static final String INPUT_STREAM_NAME = "ds-inventory-raw";
-    private static final String OUTPUT_STREAM_NAME = "ds-inventory-master";
-    private static final String SIDE_OUTPUT_STREAM_NAME = "ds-inventory-out";
+    private static final String INPUT_STREAM_NAME = "ds-prototype-raw";
+    private static final String OUTPUT_STREAM_NAME = "ds-prototype-master";
+    private static final String SIDE_OUTPUT_STREAM_NAME = "ds-prototype-out";
 
     private static final Logger log = LoggerFactory.getLogger(Configurator.class);
 
