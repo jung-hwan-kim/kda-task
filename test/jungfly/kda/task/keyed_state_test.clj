@@ -9,7 +9,7 @@
 (deftest kstate-edge-test
   (let [vehicleId "1"]
     (def kstate nil)
-    (def kstate (operate-kstate kstate nil))
+    (def kstate (transform-kstate kstate nil))
     (is (nil? kstate))
     ))
 
@@ -18,7 +18,7 @@
     (def kstate nil)
     (testing "Testing keyed state"
       (let [event (data/parse (data/vehicle-update vehicleId))]
-        (def kstate (operate-kstate kstate event))
+        (def kstate (transform-kstate kstate event))
         (is (= 1 (count (:history kstate))))
         (is (= 0 (count (:auctions kstate))))
         (is (= 0 (count (:pictures kstate))))
@@ -27,31 +27,31 @@
         (is (= "13" (:vehicleStatusId kstate)))
         (is (= vehicleId (:vehicleId kstate))))
       (let [event (data/parse (data/vehicle-addtional-info-update vehicleId))]
-        (def kstate (operate-kstate kstate event))
+        (def kstate (transform-kstate kstate event))
         (is (= 2 (count (:history kstate))))
         (is (= "15000" (:mileage kstate)))
         (is (= vehicleId (:vehicleId kstate))))
       (let [event (data/parse (data/vehicle-addtional-info-update vehicleId))]
-        (def kstate (operate-kstate kstate event))
+        (def kstate (transform-kstate kstate event))
         (is (= 3 (count (:history kstate))))
         (is (= "15000" (:mileage kstate)))
         (is (= vehicleId (:vehicleId kstate)))
         (is (= 0 (count (:picture kstate)))))
       (let [event (data/parse (data/picture-update vehicleId))]
-        (def kstate (operate-kstate kstate event))
+        (def kstate (transform-kstate kstate event))
         (is (= 3 (count (:history kstate))))
         (is (= "15000" (:mileage kstate)))
         (is (= vehicleId (:vehicleId kstate)))
         (is (= 1 (count (:pictures kstate)))))
       (let [event (data/parse (data/auction-update vehicleId))]
-        (def kstate (operate-kstate kstate event))
+        (def kstate (transform-kstate kstate event))
         (is (= 3 (count (:history kstate))))
         (is (= "15000" (:mileage kstate)))
         (is (= vehicleId (:vehicleId kstate)))
         (is (= 1 (count (:auctions kstate))))
         (is (= 1 (count (:pictures kstate)))))
       (let [event (data/parse (data/picture-update vehicleId))]
-        (def kstate (operate-kstate kstate event))
+        (def kstate (transform-kstate kstate event))
         (is (= 3 (count (:history kstate))))
         (is (= "15000" (:mileage kstate)))
         (is (= "3" (:systemId kstate)))

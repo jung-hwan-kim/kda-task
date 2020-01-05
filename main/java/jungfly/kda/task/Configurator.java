@@ -20,6 +20,7 @@ import java.util.Properties;
 public class Configurator {
     private static final String REGION = "us-east-1";
     private static final String INPUT_STREAM_NAME = "ds-prototype-raw";
+    private static final String SIDE_INPUT_STREAM_NAME = "ds-prototype-in";
     private static final String OUTPUT_STREAM_NAME = "ds-prototype-master";
     private static final String SIDE_OUTPUT_STREAM_NAME = "ds-prototype-out";
 
@@ -27,13 +28,18 @@ public class Configurator {
 
     public static FlinkKinesisConsumer<String> createSource() throws IOException {
         Properties consumerConfig = getConsumerConfig();
-        String name = consumerConfig.getProperty("stream.name");
+        String name = consumerConfig.getProperty("stream.name", INPUT_STREAM_NAME);
+        return new FlinkKinesisConsumer<>(name, new SimpleStringSchema(), consumerConfig);
+    }
+    public static FlinkKinesisConsumer<String> createSideSource() throws IOException {
+        Properties consumerConfig = getConsumerConfig();
+        String name = consumerConfig.getProperty("side.stream.name", SIDE_INPUT_STREAM_NAME);
         return new FlinkKinesisConsumer<>(name, new SimpleStringSchema(), consumerConfig);
     }
 
     public static FlinkKinesisProducer<String> createSink() throws IOException {
         Properties producerConfig = getProducerConfig();
-        String name = producerConfig.getProperty("stream.name");
+        String name = producerConfig.getProperty("stream.name", OUTPUT_STREAM_NAME);
         String defaultPartition = producerConfig.getProperty("default.partition");
         FlinkKinesisProducer<String> sink = new FlinkKinesisProducer<>(new SimpleStringSchema(), producerConfig);
         sink.setDefaultStream(name);
@@ -43,7 +49,7 @@ public class Configurator {
 
     public static FlinkKinesisProducer<String> createSideOutSink() throws IOException {
         Properties producerConfig = getProducerConfig();
-        String name = producerConfig.getProperty("side.stream.name");
+        String name = producerConfig.getProperty("side.stream.name", SIDE_OUTPUT_STREAM_NAME);
         String defaultPartition = producerConfig.getProperty("default.partition");
         FlinkKinesisProducer<String> sink = new FlinkKinesisProducer<>(new SimpleStringSchema(), producerConfig);
         sink.setDefaultStream(name);
@@ -61,6 +67,7 @@ public class Configurator {
             consumerConfig = new Properties();
             consumerConfig.setProperty(ConsumerConfigConstants.AWS_REGION, REGION);
             consumerConfig.setProperty(ConsumerConfigConstants.STREAM_INITIAL_POSITION, "LATEST");
+            consumerConfig.setProperty("side.stream.name", SIDE_INPUT_STREAM_NAME);
             consumerConfig.setProperty("stream.name", INPUT_STREAM_NAME);
         }
         return consumerConfig;
@@ -179,6 +186,7 @@ public class Configurator {
         KeyedStream<byte[], String> keyedStream = mainStream.keyBy(selector);
         BroadcastStream<byte[]> broadcastStream = bStream.broadcast(inventoryEnricher.bstateDescriptor);
 
+
         SingleOutputStreamOperator<byte[]> enriched = keyedStream.connect(broadcastStream).process(inventoryEnricher).name("inventory");
         enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
 
@@ -186,4 +194,28 @@ public class Configurator {
         sideStream.addSink(sideOut).name("side-out");
         return env;
     }
-}
+    public static StreamExecutionEnvironment configurePrototype08(AbstractRawParser parser,
+                                                                  AbstractSelector selector,
+                                                                  AbstractLogMapFunction logFunction,
+                                                                  AbstractKeyedBroadcaster inventoryEnricher) throws Exception {
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        SinkFunction<String> out = createSink();
+        SinkFunction<String> sideOut = createSideOutSink();
+        DataStreamSource<String> in = env.addSource(createSource());
+        in.name("in");
+
+        SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("parse");
+        DataStream<byte[]> bStream = mainStream.getSideOutput(parser.ruleTag);
+        DataStream<String> errorStream = mainStream.getSideOutput(parser.errorTag);
+        errorStream.addSink(sideOut).name("side-out");
+
+        KeyedStream<byte[], String> keyedStream = mainStream.keyBy(selector);
+
+        CoEnricher ce = new CoEnricher();
+        SingleOutputStreamOperator<byte[]> enriched = keyedStream.connect(bStream).flatMap(ce).name("enrich");
+        enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
+
+        DataStream<String> sideStream = enriched.getSideOutput(inventoryEnricher.sideTag);
+        sideStream.addSink(sideOut).name("side-out");
+        return env;
+    }}
