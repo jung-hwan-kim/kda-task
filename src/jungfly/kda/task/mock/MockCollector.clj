@@ -1,5 +1,6 @@
 (ns jungfly.kda.task.mock.MockCollector
   (:require [clojure.tools.logging :as log]
+            [taoensso.nippy :as nippy]
             [cheshire.core :as json])
   (:gen-class
     :extends jungfly.kda.task.mock.AbstractMockCollector
@@ -17,7 +18,7 @@
   @(.state this))
 
 (defn -getCollected[this]
-  (map (fn[x] (json/decode-smile x true)) @(.state this)))
+  (map (fn[x] (nippy/thaw x)) @(.state this)))
 
 (defn -collect [this rawEvent]
   (swap! (.state this) conj rawEvent))

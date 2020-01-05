@@ -1,6 +1,7 @@
 (ns jungfly.kda.task.RawParser
   (:require [clojure.tools.logging :as log]
             [camel-snake-kebab.core :as csk]
+            [taoensso.nippy :as nippy]
             [cheshire.core :as json])
   (:gen-class
     :extends jungfly.kda.task.AbstractRawParser
@@ -10,17 +11,17 @@
 
 (defn -processElement[this value context collector]
     (try
-       (let [event (json/parse-string value (fn[x] (keyword (csk/->camelCase x))))
-             table (:eventtable event)
-             smile (json/encode-smile event)]
-         (case table
-           ("ADLOAD.VEHICLES" "ADLOAD.VEHICLE_ADDITIONAL_INFOS" "ADLOAD.CURRENT_AUCTIONS" "ADLOAD.PICTURES" "HEARTBEAT_K") (.collect collector smile)
-           ("rule" "HEARTBEAT_B") (do
-                                    (.output context (.getRuleTag this) smile))
-           (do
-             (log/error "unsupported table name:" table)
-             (.output context (.getErrorTag this) "Unsupported TABLE name!"))))
-       (catch Exception e
-         (log/error value)
-         (log/error (.getMessage e))
-         )))
+      (let [event (json/parse-string value (fn[x] (keyword (csk/->camelCase x))))
+            table (:eventtable event)
+            smile (nippy/freeze event)]
+        (case table
+          ("ADLOAD.VEHICLES" "ADLOAD.VEHICLE_ADDITIONAL_INFOS" "ADLOAD.CURRENT_AUCTIONS" "ADLOAD.PICTURES" "HEARTBEAT_K") (.collect collector smile)
+          ("rule" "HEARTBEAT_B") (do
+                                   (.output context (.getRuleTag this) smile))
+          (do
+            (log/error "unsupported table name:" table)
+            (.output context (.getErrorTag this) (str "Unsupported TABLE:" table)))))
+      (catch Exception e
+        (log/error value)
+        (log/error (.getMessage e))
+        )))

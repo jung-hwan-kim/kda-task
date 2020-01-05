@@ -9,6 +9,7 @@ import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.co.CoFlatMapFunction;
+import org.apache.flink.util.OutputTag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
@@ -17,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 abstract public class AbstractCoEnricher implements CoFlatMapFunction<byte[], byte[], byte[]>, CheckpointedFunction {
+    public final OutputTag<String> sideTag = new OutputTag<String>("side-tag"){};
     private transient ListState<Tuple2<String, byte[]>> checkpointedState;
     private static final Logger log = LoggerFactory.getLogger(AbstractCoEnricher.class);
     protected Map<String, PersistentArrayMap> rulebook;

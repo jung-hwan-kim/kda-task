@@ -2,6 +2,8 @@
   (:require [clojure.test :refer :all]
             [clojure.tools.logging :as log]
             [cheshire.core :as json]
+            [datascript.core :as d]
+            [taoensso.nippy :as nippy]
             [jungfly.kda.task.mock.event :as data])
   (:import (jungfly.kda.task.mock MockCollector MockBroadcastState MockValueState)
            (jungfly.kda.task InventoryEnricher)))
@@ -23,7 +25,7 @@
   (.getCollected collector))
 
 (defn parse-bstate[bstate-obj]
-  (into {} (map (fn[x] {(.getKey x) (json/decode-smile (.getValue x) true)}) (seq (.entries bstate-obj)))))
+  (into {} (map (fn[x] {(.getKey x) (nippy/thaw (.getValue x))}) (seq (.entries bstate-obj)))))
 
 (deftest b-test
   (let [f (new InventoryEnricher)
@@ -78,7 +80,7 @@
   (let [v (.value kstate-obj)]
     (if (nil? v)
       nil
-      (json/decode-smile v true))))
+      (nippy/thaw v))))
 
 (deftest enrich-test
   (let [f (new InventoryEnricher)
@@ -88,7 +90,7 @@
         vehicleId "12345678"
         data (data/parse (data/vehicle-update vehicleId))]
     (testing "Testing add, update remove flow"
-      (let [result (.process f (json/encode-smile data) kso (.immutableEntries bso) c)
+      (let [result (.process f (nippy/freeze data) kso (.immutableEntries bso) c)
             collected (.getCollected c)
             bstate (parse-bstate bso)
             kstate (parse-kstate kso)]
@@ -97,7 +99,7 @@
         (is (= 1 (count collected)))
         (is (= vehicleId (:vehicleId kstate)))
         (println kstate))
-      (let [result (.process f (json/encode-smile data) kso (.immutableEntries bso) c)
+      (let [result (.process f (nippy/freeze data) kso (.immutableEntries bso) c)
             collected (.getCollected c)
             bstate (parse-bstate bso)
             kstate (parse-kstate kso)]

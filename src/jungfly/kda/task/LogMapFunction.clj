@@ -1,5 +1,6 @@
 (ns jungfly.kda.task.LogMapFunction
   (:require [clojure.tools.logging :as log]
+            [taoensso.nippy :as nippy]
             [cheshire.core :as json])
   (:gen-class
     :extends jungfly.kda.task.AbstractLogMapFunction
@@ -9,7 +10,5 @@
 
 
 (defn -map[this rawEvent]
-  (let [event (json/decode-smile rawEvent true)
-        name (.getName this)]
-    (log/info name event)
+  (let [event (nippy/thaw rawEvent)]
     (json/generate-string (assoc event :logged (System/currentTimeMillis)))))

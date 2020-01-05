@@ -197,7 +197,7 @@ public class Configurator {
     public static StreamExecutionEnvironment configurePrototype08(AbstractRawParser parser,
                                                                   AbstractSelector selector,
                                                                   AbstractLogMapFunction logFunction,
-                                                                  AbstractKeyedBroadcaster inventoryEnricher) throws Exception {
+                                                                  AbstractCoEnricher coEnricher) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         SinkFunction<String> out = createSink();
         SinkFunction<String> sideOut = createSideOutSink();
@@ -211,11 +211,10 @@ public class Configurator {
 
         KeyedStream<byte[], String> keyedStream = mainStream.keyBy(selector);
 
-        CoEnricher ce = new CoEnricher();
-        SingleOutputStreamOperator<byte[]> enriched = keyedStream.connect(bStream).flatMap(ce).name("enrich");
+        SingleOutputStreamOperator<byte[]> enriched = keyedStream.connect(bStream).flatMap(coEnricher).name("enrich");
         enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
 
-        DataStream<String> sideStream = enriched.getSideOutput(inventoryEnricher.sideTag);
+        DataStream<String> sideStream = enriched.getSideOutput(coEnricher.sideTag);
         sideStream.addSink(sideOut).name("side-out");
         return env;
     }}
