@@ -30,30 +30,36 @@
   (.update kstate-obj (nippy/freeze kstate)))
 
 
-(defn -process[this smile-data kstate-obj bstate-iterable collector]
-  (let [event (nippy/thaw smile-data)
+(defn -process[this frozen-event kstate-obj bstate-iterable collector]
+  (let [event (nippy/thaw frozen-event)
         kstate (parse-kstate-obj kstate-obj)
         bstate (parse-bstate-iterable bstate-iterable)
         eventtable (:eventtable event)]
     (log/info "process:" event)
-    (if (= eventtable "HEARTBEAT_K")
-      (case (:action event)
-        "cleanup" (do
-                    (.clear kstate-obj)
-                    (.collect collector (nippy/freeze (assoc event :cleaned-up kstate))))
-        "kstate" (.collect collector (nippy/freeze (assoc event :kstate kstate)))
-        "bstate" (.collect collector (nippy/freeze (assoc event :bstate bstate)))
-        (.collect collector smile-data))
+    (if (= eventtable "EDNK")
+      (try
+        (eval (:action event))
+        (catch Exception e
+          (log/error e)
+          (str e)))
+      ;(case (:action event)
+      ;  "cleanup" (do
+      ;              (.clear kstate-obj)
+      ;              (.collect collector (nippy/freeze (assoc event :cleaned-up kstate))))
+      ;  "kstate" (.collect collector (nippy/freeze (assoc event :kstate kstate)))
+      ;  "bstate" (.collect collector (nippy/freeze (assoc event :bstate bstate)))
+      ;  (.collect collector frozen-event))
       (if-let [new-kstate (ks/transform-kstate kstate event)]
         (do
           (update-kstate-obj kstate-obj new-kstate)
           (.collect collector (nippy/freeze new-kstate)))
         (log/info "NO UPDATE")))
-    (if (= (:debug event) true)
-        (str {:freeMem (/ (.freeMemory (Runtime/getRuntime)) 1024)
-                               :maxMem  (/ (.maxMemory (Runtime/getRuntime)) 1024)
-                               :totalMem (/ (.totalMemory (Runtime/getRuntime)) 1024)
-                               :kstate (parse-kstate-obj kstate-obj) :bstate bstate}))))
+    ;(if (= (:debug event) true)
+    ;    (str {:freeMem  (.freeMemory (Runtime/getRuntime))
+    ;          :maxMem   (.maxMemory (Runtime/getRuntime))
+    ;          :totalMem  (.totalMemory (Runtime/getRuntime))
+    ;          :kstate (parse-kstate-obj kstate-obj) :bstate bstate}))
+    ))
 
 (defn -processBroadcast[this smile-data bstate-obj collector]
   (let [event (nippy/thaw smile-data)]

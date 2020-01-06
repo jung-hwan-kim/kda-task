@@ -31,10 +31,10 @@ public class Configurator {
         String name = consumerConfig.getProperty("stream.name", INPUT_STREAM_NAME);
         return new FlinkKinesisConsumer<>(name, new SimpleStringSchema(), consumerConfig);
     }
-    public static FlinkKinesisConsumer<String> createSideSource() throws IOException {
+    public static FlinkKinesisConsumer<byte[]> createSideSource() throws IOException {
         Properties consumerConfig = getConsumerConfig();
         String name = consumerConfig.getProperty("side.stream.name", SIDE_INPUT_STREAM_NAME);
-        return new FlinkKinesisConsumer<>(name, new SimpleStringSchema(), consumerConfig);
+        return new FlinkKinesisConsumer<>(name, new BytesSchema(), consumerConfig);
     }
 
     public static FlinkKinesisProducer<String> createSink() throws IOException {
@@ -203,9 +203,11 @@ public class Configurator {
         SinkFunction<String> sideOut = createSideOutSink();
         DataStreamSource<String> in = env.addSource(createSource());
         in.name("in");
+        DataStreamSource<byte[]> sideIn = env.addSource(createSideSource());
+        sideIn.name("side-in");
 
         SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("parse");
-        DataStream<byte[]> bStream = mainStream.getSideOutput(parser.ruleTag);
+        DataStream<byte[]> bStream = sideIn.union(mainStream.getSideOutput(parser.ruleTag));
         DataStream<String> errorStream = mainStream.getSideOutput(parser.errorTag);
         errorStream.addSink(sideOut).name("side-out");
 
