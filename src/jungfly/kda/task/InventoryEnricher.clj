@@ -38,7 +38,8 @@
     (log/info "process:" event)
     (if (= eventtable "EDNK")
       (try
-        (eval (:action event))
+        (let [f (eval (:function event))]
+          (str (f kstate bstate)))
         (catch Exception e
           (log/error e)
           (str e)))
@@ -61,8 +62,8 @@
     ;          :kstate (parse-kstate-obj kstate-obj) :bstate bstate}))
     ))
 
-(defn -processBroadcast[this smile-data bstate-obj collector]
-  (let [event (nippy/thaw smile-data)]
+(defn -processBroadcast[this frozen-event bstate-obj collector]
+  (let [event (nippy/thaw frozen-event)]
     (log/info "process-broadcast:" event)
     (bs/update-bstate-counter bstate-obj)
     (bs/operate-bstate bstate-obj event)
