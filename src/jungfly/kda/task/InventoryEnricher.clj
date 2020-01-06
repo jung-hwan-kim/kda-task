@@ -39,7 +39,7 @@
     (if (= eventtable "EDNK")
       (try
         (let [f (eval (:function event))]
-          (str (f kstate bstate)))
+          (str (f kstate-obj kstate bstate)))
         (catch Exception e
           (log/error e)
           (str e)))
