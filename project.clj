@@ -1,4 +1,4 @@
-(defproject jungfly/kda-task "0.1.1"
+(defproject jungfly/kda-task "1.0-SNAPSHOT"
   :description "KDA Tasks"
   :url "https://github.com/jungflykim/kda-task"
   :dependencies [[org.clojure/clojure "1.10.1"]
