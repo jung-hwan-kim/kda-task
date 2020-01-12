@@ -102,7 +102,7 @@ public class Configurator {
         SingleOutputStreamOperator<byte[]> mainStream = in.map(parser).name("parse");
         KeyedStream<byte[], String> keyedStream = mainStream.keyBy(selector);
         keyedStream.filter(filter).name("dedup")
-                .map(logFunction)
+                .map(logFunction).name("measure")
                 .addSink(out).name("out");
         return env;
     }
