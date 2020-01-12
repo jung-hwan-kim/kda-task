@@ -178,7 +178,7 @@ public class Configurator {
         DataStreamSource<String> in = env.addSource(createSource());
         in.name("in");
 
-        SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("parse");
+        SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("parse12");
         DataStream<byte[]> bStream = mainStream.getSideOutput(parser.ruleTag);
         DataStream<String> errorStream = mainStream.getSideOutput(parser.errorTag);
         errorStream.addSink(sideOut).name("side-out");
