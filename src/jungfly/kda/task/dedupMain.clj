@@ -1,4 +1,4 @@
-(ns jungfly.kda.task.main
+(ns jungfly.kda.task.dedupMain
   (:require [clojure.tools.logging :as log])
   (:gen-class
     :main true)

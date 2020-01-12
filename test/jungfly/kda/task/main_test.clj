@@ -5,7 +5,7 @@
 
             [cheshire.core :as json]
             [clojure.tools.logging :as log]
-            [jungfly.kda.task.main :refer :all]
+            [jungfly.kda.task.dedupMain :refer :all]
             [datascript.core :as d]))
 
 
