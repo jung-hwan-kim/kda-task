@@ -176,7 +176,7 @@ public class Configurator {
         SinkFunction<String> out = createSink();
         SinkFunction<String> sideOut = createSideOutSink();
         DataStreamSource<String> in = env.addSource(createSource());
-        in.name("in");
+        in.name("inq21");
 
         SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("parse12");
         DataStream<byte[]> bStream = mainStream.getSideOutput(parser.ruleTag);
