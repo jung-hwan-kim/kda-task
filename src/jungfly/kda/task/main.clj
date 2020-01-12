@@ -3,7 +3,7 @@
   (:gen-class
     :main true)
   (:import (org.apache.flink.streaming.api.environment StreamExecutionEnvironment)
-           (jungfly.kda.task Configurator Parser Selector KeyedEnricher InventoryEnricher Broadcaster RawParser LogMapFunction)))
+           (jungfly.kda.task Configurator Parser Selector KeyedEnricher LogMapFunction DedupFilter)))
 
 (defn prototype-01[]
   (let [env (StreamExecutionEnvironment/getExecutionEnvironment)
@@ -58,14 +58,10 @@
 ;                                               (new Broadcaster))]
 ;    (.execute env "Prototype-06")))
 
-(defn prototype-07[]
-  (let [env (Configurator/configurePrototype07 (new RawParser)
-                                               (new Selector)
-                                               (new LogMapFunction)
-                                               (new InventoryEnricher))]
-    (.execute env "Prototype-07")))
+
 
 (defn -main [& args]
   (log/info "Starting")
-  (prototype-07))
+  (let [env (Configurator/configure (new Parser) (new Selector) (new DedupFilter) (new LogMapFunction))]
+    (.execute env "Prototype-08")))
 

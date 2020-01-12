@@ -1,5 +1,6 @@
 (ns jungfly.kda.task.Parser
   (:require [clojure.tools.logging :as log]
+            [taoensso.nippy :as nippy]
             [cheshire.core :as json])
   (:gen-class
     :implements [jungfly.kda.task.AbstractParser]
@@ -7,5 +8,4 @@
 
 (defn -map[this value]
   (let [event (json/parse-string value true)]
-    (log/info "parser->" event)
-    (json/encode-smile event)))
+    (nippy/freeze (assoc event :ingested (System/currentTimeMillis)))))

@@ -10,5 +10,6 @@
 
 
 (defn -map[this rawEvent]
-  (let [event (nippy/thaw rawEvent)]
-    (json/generate-string (assoc event :logged (System/currentTimeMillis)))))
+  (let [event (nippy/thaw rawEvent)
+        ingested (:ingested event)]
+    (json/generate-string (assoc event :dur (- (System/currentTimeMillis) ingested)))))

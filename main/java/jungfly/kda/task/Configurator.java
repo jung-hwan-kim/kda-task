@@ -87,136 +87,23 @@ public class Configurator {
         }
         return producerConfig;
     }
-    public static void configure(StreamExecutionEnvironment env) throws Exception {
-        DataStreamSource<String> src = env.addSource(createSource());
 
-    }
 
-//    public static StreamExecutionEnvironment configurePrototype03(AbstractParser parser, AbstractOpEnricher enricher) throws Exception {
-//       final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-//       DataStreamSource<String> in = env.addSource(createSource());
-//             in.map(parser).name("parser")
-//               .flatMap(enricher).name("op-enricher").setMaxParallelism(1).setParallelism(1)
-//               .addSink(createSink());
-//       env.enableCheckpointing(5000);
-//       return env;
-//    }
 
-//    public static StreamExecutionEnvironment configurePrototype04(AbstractRawParser parser, AbstractLogMapFunction logFunction) throws Exception {
-//        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-//        DataStreamSource<String> in = env.addSource(createSource());
-//        in.map(parser).name("rawparser")
-//                .map(logFunction.name("LOG")).name("log")
-//                .addSink(createSink());
-//        return env;
-//    }
-    public static StreamExecutionEnvironment configurePrototype05(AbstractRawParser parser,
-                                                                  AbstractLogMapFunction logFunction,
-                                                                  AbstractLogMapFunction sideLogFunction,
-                                                                  AbstractLogMapFunction errorLogFunction,
-                                                                  AbstractEnricher opEnricher,
-                                                                  AbstractCoEnricher coEnricher) throws Exception {
+    public static StreamExecutionEnvironment configure(AbstractParser parser,
+                                                       AbstractSelector selector,
+                                                       AbstractFilter filter,
+                                                       AbstractLogMapFunction logFunction) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        final OutputTag<byte[]> ruleTag = new OutputTag<byte[]>("rule-tag"){};
-        final OutputTag<byte[]> errorTag = new OutputTag<byte[]>("error-tag"){};
         SinkFunction<String> out = createSink();
-        SinkFunction<String> sideOut = createSideOutSink();
         DataStreamSource<String> in = env.addSource(createSource());
         in.name("in");
-        SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("raw-parse");
-        SingleOutputStreamOperator<byte[]> mainStream2 = mainStream.flatMap(opEnricher).name("actor");
 
-
-
-        DataStream<byte[]> ruleStream = mainStream.getSideOutput(parser.ruleTag);
-
-        DataStream<String> errorStream = mainStream.getSideOutput(parser.errorTag);
-        errorStream.addSink(sideOut).name("out");
-
-        SingleOutputStreamOperator<byte[]> enriched = mainStream2.connect(ruleStream).flatMap(coEnricher).name("rule");
-        enriched.setParallelism(1);
-        enriched.setMaxParallelism(1);
-        enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
-        return env;
-    }
-
-    public static StreamExecutionEnvironment configurePrototype06(AbstractRawParser parser,
-                                                                  AbstractLogMapFunction logFunction,
-                                                                  AbstractLogMapFunction errorLogFunction,
-                                                                  AbstractEnricher opEnricher,
-                                                                  AbstractBroadcaster broadcaster) throws Exception {
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        SinkFunction<String> out = createSink();
-        DataStreamSource<String> in = env.addSource(createSource());
-        SinkFunction<String> sideOut = createSideOutSink();
-
-        in.name("in");
-        SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("raw-parse");
-        SingleOutputStreamOperator<byte[]> mainStream2 = mainStream.flatMap(opEnricher).name("actor");
-
-
-        DataStream<byte[]> ruleStream = mainStream.getSideOutput(parser.ruleTag);
-        DataStream<String> errorStream = mainStream.getSideOutput(parser.errorTag);
-        errorStream.addSink(sideOut).name("out");
-
-//        MapStateDescriptor<String, byte[]> ruleStateDescriptor = new MapStateDescriptor<String, byte[]>(
-//                "RulesBroadcastState", BasicTypeInfo.STRING_TYPE_INFO, TypeInformation.of(new TypeHint<byte[]>() {}));
-
-        BroadcastStream<byte[]> broadcastStream = ruleStream.broadcast(broadcaster.ruleStateDescriptor);
-        SingleOutputStreamOperator<byte[]> enriched = mainStream2.connect(broadcastStream).process(broadcaster);
-        enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
-        return env;
-    }
-
-    public static StreamExecutionEnvironment configurePrototype07(AbstractRawParser parser,
-                                                                  AbstractSelector selector,
-                                                                  AbstractLogMapFunction logFunction,
-                                                                  AbstractKeyedBroadcaster inventoryEnricher) throws Exception {
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        SinkFunction<String> out = createSink();
-        SinkFunction<String> sideOut = createSideOutSink();
-        DataStreamSource<String> in = env.addSource(createSource());
-        in.name("inq21");
-
-        SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("parse12");
-        DataStream<byte[]> bStream = mainStream.getSideOutput(parser.ruleTag);
-        DataStream<String> errorStream = mainStream.getSideOutput(parser.errorTag);
-        errorStream.addSink(sideOut).name("side-out");
-
+        SingleOutputStreamOperator<byte[]> mainStream = in.map(parser).name("parse");
         KeyedStream<byte[], String> keyedStream = mainStream.keyBy(selector);
-        BroadcastStream<byte[]> broadcastStream = bStream.broadcast(inventoryEnricher.bstateDescriptor);
-
-
-        SingleOutputStreamOperator<byte[]> enriched = keyedStream.connect(broadcastStream).process(inventoryEnricher).name("inventory");
-        enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
-
-        DataStream<String> sideStream = enriched.getSideOutput(inventoryEnricher.sideTag);
-        sideStream.addSink(sideOut).name("side-out");
+        keyedStream.filter(filter).name("dedup")
+                .map(logFunction)
+                .addSink(out).name("out");
         return env;
     }
-    public static StreamExecutionEnvironment configurePrototype08(AbstractRawParser parser,
-                                                                  AbstractSelector selector,
-                                                                  AbstractLogMapFunction logFunction,
-                                                                  AbstractCoEnricher coEnricher) throws Exception {
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        SinkFunction<String> out = createSink();
-        SinkFunction<String> sideOut = createSideOutSink();
-        DataStreamSource<String> in = env.addSource(createSource());
-        in.name("in");
-        DataStreamSource<byte[]> sideIn = env.addSource(createSideSource());
-        sideIn.name("side-in");
-
-        SingleOutputStreamOperator<byte[]> mainStream = in.process(parser).name("parse");
-        DataStream<byte[]> bStream = sideIn.union(mainStream.getSideOutput(parser.ruleTag));
-        DataStream<String> errorStream = mainStream.getSideOutput(parser.errorTag);
-        errorStream.addSink(sideOut).name("side-out");
-
-        KeyedStream<byte[], String> keyedStream = mainStream.keyBy(selector);
-
-        SingleOutputStreamOperator<byte[]> enriched = keyedStream.connect(bStream).flatMap(coEnricher).name("enrich");
-        enriched.map(logFunction.name("LOG")).name("log").addSink(out).name("out");
-
-        DataStream<String> sideStream = enriched.getSideOutput(coEnricher.sideTag);
-        sideStream.addSink(sideOut).name("side-out");
-        return env;
-    }}
+}
