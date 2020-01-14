@@ -26,29 +26,35 @@ public class Configurator {
 
     private static final Logger log = LoggerFactory.getLogger(Configurator.class);
 
-    public static FlinkKinesisConsumer<String> createSource() throws IOException {
-        Properties consumerConfig = getConsumerConfig();
-        String name = consumerConfig.getProperty("stream.name", INPUT_STREAM_NAME);
+    public static FlinkKinesisConsumer<String> createSource(String inputStreamName) throws IOException {
+        Properties consumerConfig = getConsumerConfig(inputStreamName);
+        String name = consumerConfig.getProperty("stream.name", inputStreamName);
         return new FlinkKinesisConsumer<>(name, new SimpleStringSchema(), consumerConfig);
     }
+    public static FlinkKinesisConsumer<String> createSource() throws IOException {
+        return createSource(INPUT_STREAM_NAME);
+    }
     public static FlinkKinesisConsumer<byte[]> createSideSource() throws IOException {
-        Properties consumerConfig = getConsumerConfig();
+        Properties consumerConfig = getConsumerConfig(INPUT_STREAM_NAME);
         String name = consumerConfig.getProperty("side.stream.name", SIDE_INPUT_STREAM_NAME);
         return new FlinkKinesisConsumer<>(name, new BytesSchema(), consumerConfig);
     }
 
-    public static FlinkKinesisProducer<String> createSink() throws IOException {
-        Properties producerConfig = getProducerConfig();
-        String name = producerConfig.getProperty("stream.name", OUTPUT_STREAM_NAME);
+    public static FlinkKinesisProducer<String> createSink(String outputStreamName) throws IOException {
+        Properties producerConfig = getProducerConfig(outputStreamName);
+        String name = producerConfig.getProperty("stream.name", outputStreamName);
         String defaultPartition = producerConfig.getProperty("default.partition");
         FlinkKinesisProducer<String> sink = new FlinkKinesisProducer<>(new SimpleStringSchema(), producerConfig);
         sink.setDefaultStream(name);
         sink.setDefaultPartition(defaultPartition);
         return sink;
     }
+    public static FlinkKinesisProducer<String> createSink() throws IOException {
+        return createSink(OUTPUT_STREAM_NAME);
+    }
 
     public static FlinkKinesisProducer<String> createSideOutSink() throws IOException {
-        Properties producerConfig = getProducerConfig();
+        Properties producerConfig = getProducerConfig(OUTPUT_STREAM_NAME);
         String name = producerConfig.getProperty("side.stream.name", SIDE_OUTPUT_STREAM_NAME);
         String defaultPartition = producerConfig.getProperty("default.partition");
         FlinkKinesisProducer<String> sink = new FlinkKinesisProducer<>(new SimpleStringSchema(), producerConfig);
@@ -58,7 +64,7 @@ public class Configurator {
         return sink;
     }
 
-    private static Properties getConsumerConfig() throws IOException {
+    private static Properties getConsumerConfig(String inputStreamName) throws IOException {
         Map<String, Properties> applicationProperties = KinesisAnalyticsRuntime.getApplicationProperties();
         Properties consumerConfig = applicationProperties.get("ConsumerConfigProperties");
         log.info("ConsumerConfig:" + consumerConfig);
@@ -68,11 +74,11 @@ public class Configurator {
             consumerConfig.setProperty(ConsumerConfigConstants.AWS_REGION, REGION);
             consumerConfig.setProperty(ConsumerConfigConstants.STREAM_INITIAL_POSITION, "LATEST");
             consumerConfig.setProperty("side.stream.name", SIDE_INPUT_STREAM_NAME);
-            consumerConfig.setProperty("stream.name", INPUT_STREAM_NAME);
+            consumerConfig.setProperty("stream.name", inputStreamName);
         }
         return consumerConfig;
     }
-    private static Properties getProducerConfig() throws IOException {
+    private static Properties getProducerConfig(String outputStreamName) throws IOException {
         Map<String, Properties> applicationProperties = KinesisAnalyticsRuntime.getApplicationProperties();
         Properties producerConfig = applicationProperties.get("ProducerConfigProperties");
         log.info("ProducerConfig:" + producerConfig);
@@ -81,7 +87,7 @@ public class Configurator {
             producerConfig = new Properties();
             producerConfig.setProperty(ConsumerConfigConstants.AWS_REGION, REGION);
             producerConfig.setProperty("AggregationEnabled", "false");
-            producerConfig.setProperty("stream.name", OUTPUT_STREAM_NAME);
+            producerConfig.setProperty("stream.name", outputStreamName);
             producerConfig.setProperty("side.stream.name", SIDE_OUTPUT_STREAM_NAME);
             producerConfig.setProperty("default.partition", "0");
         }
