@@ -8,9 +8,9 @@
     ))
 (defn -getKey[this smile-data]
   (let [event (nippy/thaw smile-data)
-        pkey (:vehicleid event)]
+        pkey (:vehicleId event)]
     (if (nil? pkey)
       (do
-        (log/error "vehicleid was null for : " event)
+        (log/error "vehicleId was null for : " event)
         "nil")
       (str pkey))))
