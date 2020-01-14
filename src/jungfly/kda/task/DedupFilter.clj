@@ -22,14 +22,15 @@
 
 (defn -filter[this frozen-event]
   (let [event (nippy/thaw frozen-event)
-        eventtype (:eventtype event)
+        eventType (:eventType event)
+        vehicleId (:vehicleId event)
         state (get-state this)
-        content-of-event (dissoc event :eventtype :id :eventdate :ingested)]
+        content-of-event (dissoc event :eventType :id :eventDate :ingested)]
     (if (= state content-of-event)
       (do
-        (log/info "Removing duplicated event of " eventtype)
+        (log/info "Removing duplicate: " vehicleId eventType)
         false)
       (do
-        (log/info "OK:" eventtype)
+        (log/info "OK:" eventType)
         (update-state this content-of-event)
         true))))
